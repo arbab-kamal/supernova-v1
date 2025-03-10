@@ -22,52 +22,61 @@ import {
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import axios from "axios";
 
 const Sidebar = () => {
   const [isPromptOpen, setIsPromptOpen] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
-  const [email, setEmail] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   const pathname = usePathname();
 
   useEffect(() => {
-    const fetchEmail = async () => {
+    const fetchUsername = async () => {
       try {
-        const response = await fetch("http://localhost:8080/addUser", {
-          method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
+        const response = await axios.get("http://localhost:8080/userName", {
+          withCredentials: true,
         });
 
-        if (!response.ok) throw new Error("Failed to fetch email");
-
-        const data = await response.json();
-        setEmail(data.email); // Assuming API returns { email: "user@example.com" }
+        // Handle different response formats
+        if (typeof response.data === "string") {
+          setUsername(response.data.trim());
+        } else if (typeof response.data === "object" && response.data !== null) {
+          if ("username" in response.data) {
+            setUsername(response.data.username);
+          } else {
+            // Try to get the first value in the object
+            const firstValue = Object.values(response.data)[0];
+            if (typeof firstValue === "string") {
+              setUsername(firstValue);
+            } else {
+              throw new Error("Invalid data format");
+            }
+          }
+        } else {
+          throw new Error("Invalid data format");
+        }
       } catch (error) {
-        console.error("Error fetching email:", error);
-        setEmail("Unknown User"); // Fallback if error occurs
+        console.error("Error fetching username:", error);
+        setUsername("Unknown User"); // Fallback if error occurs
       }
     };
 
-    fetchEmail();
+    fetchUsername();
   }, []);
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:8080/logout", {
-        method: "GET",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+      const response = await axios.get("http://localhost:8080/logout", {
+        withCredentials: true,
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         localStorage.clear();
         sessionStorage.clear();
         window.location.href = "/auth";
       } else {
-        throw new Error(
-          `Logout failed: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error("Error during logout:", error);
@@ -218,7 +227,7 @@ const Sidebar = () => {
               <MessageCircle className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 text-left">
-              <div className="text-sm font-medium">{email || "Loading..."}</div>
+              <div className="text-sm font-medium">{username || "Loading..."}</div>
               <div className="text-xs text-white/70">Free Plan</div>
             </div>
             <ChevronDown className="w-4 h-4 text-white" />

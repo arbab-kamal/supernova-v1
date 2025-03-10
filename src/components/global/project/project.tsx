@@ -2,15 +2,14 @@
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Zap, ArrowLeft, Save } from "lucide-react";
-import ChatBox from "../chat/index";
-import ProjectModal from "./modal";
+import { useRouter } from "next/navigation"; // Import the router
 import axios from "axios";
 import { toast } from "sonner";
+import ProjectModal from "./modal";
 
 const ProjectDashboard = () => {
+  const router = useRouter(); // Initialize the router
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-  const [isAddToProjectOpen, setIsAddToProjectOpen] = React.useState(false);
-  const [selectedProject, setSelectedProject] = React.useState(null);
   const [projects, setProjects] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -46,17 +45,8 @@ const ProjectDashboard = () => {
   };
 
   const handleProjectClick = (project) => {
-    setSelectedProject(project);
-  };
-
-  const handleBackClick = () => {
-    setSelectedProject(null);
-  };
-
-  const handleAddToProject = (projectId) => {
-    // Add your save logic here
-    console.log("Adding to project:", projectId);
-    setIsAddToProjectOpen(false);
+    // Navigate to the chat page with the project ID as a query parameter
+    router.push(`/chat?projectId=${project.id}&projectTitle=${encodeURIComponent(project.title)}`);
   };
 
   const handleCreateProject = async (newProject) => {
@@ -78,39 +68,6 @@ const ProjectDashboard = () => {
       toast.error("Failed to create project. Please try again.");
     }
   };
-
-  if (selectedProject) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              className="p-0 hover:bg-transparent"
-              onClick={handleBackClick}
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <h1 className="text-xl font-semibold">{selectedProject.title}</h1>
-          </div>
-          <Button
-            onClick={() => setIsAddToProjectOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            Save to Project
-          </Button>
-        </div>
-        <ChatBox projectId={selectedProject.id} />
-        <ProjectModal
-          isOpen={isAddToProjectOpen}
-          onClose={() => setIsAddToProjectOpen(false)}
-          projects={projects}
-          onAddToProject={handleAddToProject}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="p-6">

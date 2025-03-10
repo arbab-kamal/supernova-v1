@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { getThemeColors } from "@/lib/constant";
+import axios from "axios";
 
 interface WelcomeUserProps {
   className?: string;
@@ -28,38 +29,25 @@ const WelcomeUser: React.FC<WelcomeUserProps> = ({ className = "" }) => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8080/userName", {
-        credentials: "include",
+      const response = await axios.get("http://localhost:8080/userName", {
+        withCredentials: true,
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          setUserData(null);
-          return;
-        }
-        throw new Error(`Failed to fetch username: ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get("content-type");
       let data: UserData;
 
-      if (contentType?.includes("application/json")) {
-        const jsonData = await response.json();
-        data = jsonData;
-      } else {
-        const textData = await response.text();
-        data = { username: textData.trim() };
-      }
-
-      if (typeof data === "string") {
-        setUserData({ username: data });
-      } else if (typeof data === "object" && data !== null) {
-        if ("username" in data) {
-          setUserData(data as UserData);
+      // If response is a string
+      if (typeof response.data === "string") {
+        data = { username: response.data.trim() };
+      } 
+      // If response is an object with username property
+      else if (typeof response.data === "object" && response.data !== null) {
+        if ("username" in response.data) {
+          data = response.data as UserData;
         } else {
-          const firstValue = Object.values(data)[0];
+          // Try to get the first value in the object
+          const firstValue = Object.values(response.data)[0];
           if (typeof firstValue === "string") {
-            setUserData({ username: firstValue });
+            data = { username: firstValue };
           } else {
             throw new Error("Invalid data format");
           }
@@ -67,9 +55,19 @@ const WelcomeUser: React.FC<WelcomeUserProps> = ({ className = "" }) => {
       } else {
         throw new Error("Invalid data format");
       }
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error fetching username";
+
+      setUserData(data);
+    } catch (err) {
+      // Handle 401 unauthorized separately
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setUserData(null);
+        return;
+      }
+
+      const errorMessage = axios.isAxiosError(err) 
+        ? `Failed to fetch username: ${err.message}`
+        : "Error fetching username";
+      
       setError(errorMessage);
       console.error("Fetch error:", err);
     } finally {
