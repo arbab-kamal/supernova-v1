@@ -28,10 +28,12 @@ const ProjectDashboard = () => {
       const formattedProjects = response.data.map((projectTitle, index) => ({
         id: String(index + 1),
         title: projectTitle,
-        // Default values for other fields
+        // Default values for other properties used in your UI
+        image: "/book.jpg",
+        admin: "Admin",
+        adminAvatar: "/1.jpeg",
         chatCount: 0,
-        promptCount: 0,
-        // You can add other default properties here
+        promptCount: 0
       }));
       
       setProjects(formattedProjects);
