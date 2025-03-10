@@ -50,7 +50,7 @@ const AuthPage = () => {
       console.log('User login successful:', response.data);
       
       // Redirect to user dashboard
-      router.push('/chat/project');
+      router.push('/project');
     } catch (error) {
       console.error('Login error:', error);
       setError(error.response?.data?.message || 'Failed to login. Please check your credentials.');

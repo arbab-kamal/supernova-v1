@@ -327,7 +327,7 @@ const UserManagement = () => {
                   {users.map((user) => (
                     <TableRow key={user.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">
-                        {`${user.firstName || ''} ${user.lastName || ''}`.trim()  || 'Unknown'}
+                        {user.firstName || 'Unknown'}
                       </TableCell>
                       <TableCell className="text-gray-500">{user.email}</TableCell>
                       <TableCell>
@@ -349,7 +349,7 @@ const UserManagement = () => {
                           className="text-gray-400 hover:text-gray-600"
                           onClick={() => {
                             toast("User Options", {
-                              description: `Options for ${user.name || `${user.firstName} ${user.lastName}`} will be available soon.`,
+                              description: `Options for ${user.firstName} will be available soon.`,
                               duration: 3000,
                             });
                           }}
