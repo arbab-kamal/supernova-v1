@@ -12,6 +12,14 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const UserManagement = () => {
   const [showAddUserForm, setShowAddUserForm] = useState(false);
@@ -271,10 +279,6 @@ const UserManagement = () => {
                   type="button" 
                   onClick={() => {
                     setShowAddUserForm(false);
-                    toast("Form Canceled", {
-                      description: "User creation was canceled.",
-                      duration: 3000,
-                    });
                   }} 
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
                   disabled={loading}
@@ -308,54 +312,56 @@ const UserManagement = () => {
               <p>No users found. Add a new user to get started.</p>
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Name</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Email</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Role</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Team</th>
-                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm">
-                    {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Unknown'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        user.role === 'Admin' || user.role_name === 'Admin' ? 'bg-purple-100 text-purple-800' :
-                        user.role === 'Editor' || user.role_name === 'Editor' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {user.role || user.role_name || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${getTeamColor(user.team || user.team_name)}`}>
-                        {user.team || user.team_name || 'No Team'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm">
-                      <button 
-                        className="text-gray-400 hover:text-gray-600"
-                        onClick={() => {
-                          toast("User Options", {
-                            description: `Options for ${user.name || `${user.firstName} ${user.lastName}`} will be available soon.`,
-                            duration: 3000,
-                          });
-                        }}
-                      >
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Team</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">
+                        {`${user.firstName || ''} ${user.lastName || ''}`.trim()  || 'Unknown'}
+                      </TableCell>
+                      <TableCell className="text-gray-500">{user.email}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          user.role === 'Admin' || user.role_name === 'Admin' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'Editor' || user.role_name === 'Editor' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {user.role || user.role_name || 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${getTeamColor(user.team || user.team_name)}`}>
+                          {user.team || user.team_name || 'No Team'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button 
+                          className="text-gray-400 hover:text-gray-600"
+                          onClick={() => {
+                            toast("User Options", {
+                              description: `Options for ${user.name || `${user.firstName} ${user.lastName}`} will be available soon.`,
+                              duration: 3000,
+                            });
+                          }}
+                        >
+                          <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

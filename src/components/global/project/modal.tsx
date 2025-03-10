@@ -90,16 +90,6 @@ const ProjectModal = ({
                 placeholder="Enter project title"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full p-2 border rounded-md h-24"
-                placeholder="Enter project description"
-              />
-            </div>
           </div>
         ) : (
           // Save to project selection

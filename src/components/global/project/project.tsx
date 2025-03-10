@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Zap, ArrowLeft, Save } from "lucide-react";
 import ChatBox from "../chat/index";
@@ -11,24 +11,26 @@ const ProjectDashboard = () => {
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [isAddToProjectOpen, setIsAddToProjectOpen] = React.useState(false);
   const [selectedProject, setSelectedProject] = React.useState(null);
-  const [projects, setProjects] = React.useState([
-    {
-      id: 1,
-      title: "Cybersecurity Risk Assessment",
-      image: "/book.jpg",
-      admin: "James Cargo",
-      chatCount: 12,
-      promptCount: 4,
-    },
-    {
-      id: 2,
-      title: "Tech Risk Documentation",
-      image: "/book2.jpg",
-      admin: "James Cargo",
-      chatCount: 12,
-      promptCount: 4,
-    },
-  ]);
+  const [projects, setProjects] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // Fetch projects from API on component mount
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get("http://localhost:8080/getProjects");
+      setProjects(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      toast.error("Failed to load projects. Please try again.");
+      setLoading(false);
+    }
+  };
 
   const handleProjectClick = (project) => {
     setSelectedProject(project);
@@ -51,17 +53,8 @@ const ProjectDashboard = () => {
         projectTitle: newProject.title
       });
       
-      // Add new project to the projects list
-      const createdProject = {
-        id: response.data.id || Date.now(), // Use the returned ID or generate a temporary one
-        title: newProject.title,
-        image: "/book.jpg", // Default image
-        admin: "James Cargo", // Default admin
-        chatCount: 0,
-        promptCount: 0,
-      };
-      
-      setProjects([...projects, createdProject]);
+      // Refresh the projects list after creating a new one
+      fetchProjects();
       
       // Show success toast
       toast.success("Project created successfully!");
@@ -120,60 +113,68 @@ const ProjectDashboard = () => {
 
       <h2 className="text-sm text-gray-600 mb-4">All Projects</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
-          <div
-            key={project.id}
-            className="bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleProjectClick(project)}
-          >
-            <img
-              src={project.image}
-              alt={project.title}
-              className="w-full h-48 object-cover rounded-t-lg"
-            />
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium">{project.title}</h3>
-                <button
-                  className="text-gray-400 hover:text-gray-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Handle menu click
-                  }}
-                >
-                  •••
-                </button>
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/1.jpeg"
-                    className="w-6 h-6 rounded-full bg-gray-200"
-                  />
-                  <span className="text-sm">{project.admin}</span>
+      {loading ? (
+        <div className="text-center py-12">Loading projects...</div>
+      ) : projects.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          No projects found. Create your first project to get started.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <div
+              key={project.id}
+              className="bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleProjectClick(project)}
+            >
+              <img
+                src={project.image || "/book.jpg"}
+                alt={project.title}
+                className="w-full h-48 object-cover rounded-t-lg"
+              />
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-medium">{project.title}</h3>
+                  <button
+                    className="text-gray-400 hover:text-gray-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Handle menu click
+                    }}
+                  >
+                    •••
+                  </button>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm text-blue-600">
-                      {project.chatCount}
-                    </span>
-                    <span className="text-gray-400">AI Chat</span>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={project.adminAvatar || "/1.jpeg"}
+                      className="w-6 h-6 rounded-full bg-gray-200"
+                    />
+                    <span className="text-sm">{project.admin || "Admin"}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Zap className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm text-blue-600">
-                      {project.promptCount}
-                    </span>
-                    <span className="text-gray-400">Prompt Assist</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm text-blue-600">
+                        {project.chatCount || 0}
+                      </span>
+                      <span className="text-gray-400">AI Chat</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Zap className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm text-blue-600">
+                        {project.promptCount || 0}
+                      </span>
+                      <span className="text-gray-400">Prompt Assist</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       
       {/* Add the modal for creating new projects */}
       <ProjectModal
