@@ -15,11 +15,8 @@ import { toast } from "sonner";
 
 const UserManagement = () => {
   const [showAddUserForm, setShowAddUserForm] = useState(false);
-  const [users, setUsers] = useState([
-    { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", status: "Active" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Editor", status: "Active" },
-    { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "Viewer", status: "Inactive" },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   
   const [newUser, setNewUser] = useState({ 
     firstName: "", 
@@ -35,30 +32,33 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Fetch roles and teams when component mounts
+  // Fetch users, roles and teams when component mounts
   useEffect(() => {
-    fetchRolesAndTeams();
+    fetchAllData();
   }, []);
 
-  const fetchRolesAndTeams = async () => {
+  const fetchAllData = async () => {
     try {
-      // Fetch roles and teams in parallel
-      const [rolesResponse, teamsResponse] = await Promise.all([
+      // Fetch users, roles and teams in parallel
+      const [usersResponse, rolesResponse, teamsResponse] = await Promise.all([
+        axios.get("http://localhost:8080/getAllUsers"),
         axios.get("http://localhost:8080/getRoles"),
         axios.get("http://localhost:8080/getTeams")
       ]);
       
+      setUsers(usersResponse.data);
       setRoles(rolesResponse.data);
       setTeams(teamsResponse.data);
     } catch (error) {
-      console.error("Error fetching roles and teams:", error);
-      setFormError("Failed to load roles and teams. Please try again later.");
+      console.error("Error fetching data:", error);
       
       // Show toast notification for the error
       toast.error("Error Loading Data", {
-        description: "Failed to load roles and teams. Please try again.",
+        description: "Failed to load users, roles, or teams. Please try again.",
         duration: 5000,
       });
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
@@ -71,17 +71,12 @@ const UserManagement = () => {
       // Call the API to add a new user
       await axios.post("http://localhost:8080/addUser", newUser);
       
-      // Update the UI with the new user (in a real app, you might fetch the updated user list)
-      const fullName = `${newUser.firstName} ${newUser.lastName}`;
-      setUsers([...users, { 
-        id: users.length + 1, 
-        name: fullName, 
-        email: newUser.email, 
-        role: newUser.role_name, 
-        status: "Active" 
-      }]);
+      // Refresh the user list to get the updated data
+      const updatedUsersResponse = await axios.get("http://localhost:8080/getAllUsers");
+      setUsers(updatedUsersResponse.data);
       
       // Show success toast
+      const fullName = `${newUser.firstName} ${newUser.lastName}`;
       toast.success("User Added Successfully", {
         description: `${fullName} has been added to the system.`,
         duration: 3000,
@@ -124,6 +119,28 @@ const UserManagement = () => {
       description: "Please fill in all required fields.",
       duration: 3000,
     });
+  };
+
+  // Helper function to get team background color
+  const getTeamColor = (teamName) => {
+    if (!teamName) return 'bg-gray-100 text-gray-800';
+    
+    // Simple hash function to generate consistent colors for teams
+    const hash = teamName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    const colors = [
+      'bg-blue-100 text-blue-800', 
+      'bg-green-100 text-green-800',
+      'bg-purple-100 text-purple-800',
+      'bg-yellow-100 text-yellow-800',
+      'bg-pink-100 text-pink-800',
+      'bg-indigo-100 text-indigo-800',
+      'bg-red-100 text-red-800',
+      'bg-orange-100 text-orange-800',
+      'bg-teal-100 text-teal-800'
+    ];
+    
+    return colors[hash % colors.length];
   };
 
   return (
@@ -280,54 +297,64 @@ const UserManagement = () => {
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Name</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Email</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Role</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
-                <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm">{user.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      user.role === 'Admin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'Editor' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm">
-                    <button 
-                      className="text-gray-400 hover:text-gray-600"
-                      onClick={() => {
-                        toast("User Options", {
-                          description: `Options for ${user.name} will be available soon.`,
-                          duration: 3000,
-                        });
-                      }}
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                  </td>
+          {isLoadingUsers ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <span className="ml-2">Loading users...</span>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+              <p>No users found. Add a new user to get started.</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Name</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Email</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Role</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Team</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm">{user.name || `${user.firstName || ''} ${user.lastName || ''}`}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        user.role === 'Admin' || user.role_name === 'Admin' ? 'bg-purple-100 text-purple-800' :
+                        user.role === 'Editor' || user.role_name === 'Editor' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {user.role || user.role_name || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs ${getTeamColor(user.team || user.team_name)}`}>
+                        {user.team || user.team_name || 'No Team'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm">
+                      <button 
+                        className="text-gray-400 hover:text-gray-600"
+                        onClick={() => {
+                          toast("User Options", {
+                            description: `Options for ${user.name || `${user.firstName} ${user.lastName}`} will be available soon.`,
+                            duration: 3000,
+                          });
+                        }}
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
     </div>
