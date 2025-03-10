@@ -23,7 +23,18 @@ const ProjectDashboard = () => {
     try {
       setLoading(true);
       const response = await axios.get("http://localhost:8080/getProjects");
-      setProjects(response.data);
+      
+      // Transform the string list into objects your component can use
+      const formattedProjects = response.data.map((projectTitle, index) => ({
+        id: String(index + 1),
+        title: projectTitle,
+        // Default values for other fields
+        chatCount: 0,
+        promptCount: 0,
+        // You can add other default properties here
+      }));
+      
+      setProjects(formattedProjects);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching projects:", error);
