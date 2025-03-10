@@ -3,18 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from "next-themes";
 import { getThemeColors } from '@/lib/constant';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const AuthPage = () => {
-  const [activeTab, setActiveTab] = useState('login');
-  const [name, setName] = useState('');
+  const [activeTab, setActiveTab] = useState('userLogin');
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  
+  const router = useRouter();
   
   // Replace isDarkMode state with next-themes
   const { theme, setTheme } = useTheme();
@@ -34,22 +35,52 @@ const AuthPage = () => {
   // Get colors from our constants file
   const colors = getThemeColors(isDarkMode);
   
-  const handleLogin = (e) => {
+  const handleUserLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    setError('');
+    
+    try {
+      const response = await axios.post('http://localhost:8080/userLogin', {
+        email,
+        password
+      });
+      
+      // Handle successful login
+      console.log('User login successful:', response.data);
+      
+      // Redirect to user dashboard
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.response?.data?.message || 'Failed to login. Please check your credentials.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
   
-  const handleSignup = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    setError('');
+    
+    try {
+      const response = await axios.post('http://localhost:8080/adminLogin', {
+        email,
+        password
+      });
+      
+      // Handle successful admin login
+      console.log('Admin login successful:', response.data);
+      
+      // Redirect to admin dashboard
+      router.push('/admin');
+    } catch (error) {
+      console.error('Admin login error:', error);
+      setError(error.response?.data?.message || 'Failed to login. Please check your credentials.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
   
   return (
@@ -99,7 +130,7 @@ const AuthPage = () => {
         </div>
       </div>
 
-      {/* Right Side - Login/Signup Tabs */}
+      {/* Right Side - Login Tabs */}
       <div className={`w-full lg:w-1/2 flex items-center justify-center p-8 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
         <div className="w-full max-w-md">
           <div className="flex justify-end mb-4">
@@ -116,46 +147,52 @@ const AuthPage = () => {
           <div className="w-full">
             <div className="grid w-full grid-cols-2 mb-6 rounded-md overflow-hidden">
               <button
-                onClick={() => setActiveTab('login')}
+                onClick={() => setActiveTab('userLogin')}
                 className={`py-3 font-medium ${
-                  activeTab === 'login' 
+                  activeTab === 'userLogin' 
                     ? `bg-blue-500 text-white` 
                     : `${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-700'}`
                 }`}
               >
-                Login
+                User Login
               </button>
               <button
-                onClick={() => setActiveTab('signup')}
+                onClick={() => setActiveTab('adminLogin')}
                 className={`py-3 font-medium ${
-                  activeTab === 'signup' 
+                  activeTab === 'adminLogin' 
                     ? `bg-blue-500 text-white` 
                     : `${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-700'}`
                 }`}
               >
-                Signup
+                Admin Login
               </button>
             </div>
 
-            {activeTab === 'login' ? (
+            {activeTab === 'userLogin' ? (
               <div className={`rounded-lg p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} ${isDarkMode ? '' : 'shadow-lg'}`}>
-                {/* Login Form Content (unchanged) */}
+                {/* User Login Form */}
                 <div className="text-center pb-4">
-                  <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Welcome Back</h2>
+                  <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>User Login</h2>
                   <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Log in to continue to SuperNova Bot
                   </p>
                 </div>
                 
-                <form onSubmit={handleLogin} className="space-y-4">
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {error}
+                  </div>
+                )}
+                
+                <form onSubmit={handleUserLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="login-username" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Username</label>
+                    <label htmlFor="login-email" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email</label>
                     <input
-                      id="login-username"
-                      type="text"
-                      placeholder="Enter your username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      id="login-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       className={`w-full p-3 rounded-md ${
                         isDarkMode 
@@ -208,43 +245,30 @@ const AuthPage = () => {
                     {isLoading ? "Logging in..." : "Login"}
                   </button>
                 </form>
-                
-                
               </div>
             ) : (
               <div className={`rounded-lg p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} ${isDarkMode ? '' : 'shadow-lg'}`}>
-                {/* Signup Form Content (unchanged) */}
+                {/* Admin Login Form */}
                 <div className="text-center pb-4">
-                  <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Create a New Account</h2>
+                  <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Admin Login</h2>
                   <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Please put your information below to create a new account for using this app.
+                    Log in to access admin controls
                   </p>
                 </div>
                 
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="name" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Full Name</label>
-                    <input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className={`w-full p-3 rounded-md ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                          : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
-                      } border focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                    />
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {error}
                   </div>
-                  
+                )}
+                
+                <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="signup-email" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email Address</label>
+                    <label htmlFor="admin-email" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email</label>
                     <input
-                      id="signup-email"
+                      id="admin-email"
                       type="email"
-                      placeholder="Enter your email address"
+                      placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -257,29 +281,12 @@ const AuthPage = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <label htmlFor="signup-username" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Username</label>
-                    <input
-                      id="signup-username"
-                      type="text"
-                      placeholder="Choose a username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                      className={`w-full p-3 rounded-md ${
-                        isDarkMode 
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                          : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
-                      } border focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="signup-password" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
+                    <label htmlFor="admin-password" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
                     <div className="relative">
                       <input
-                        id="signup-password"
+                        id="admin-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Create a password"
+                        placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -303,35 +310,6 @@ const AuthPage = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <label htmlFor="confirm-password" className={`block font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm Password</label>
-                    <div className="relative">
-                      <input
-                        id="confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm your password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        className={`w-full p-3 rounded-md ${
-                          isDarkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                            : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
-                        } border focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                        ) : (
-                          <Eye className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                        )}
-                      </button>
-                    </div>
-                  </div>
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -339,7 +317,7 @@ const AuthPage = () => {
                       isLoading ? 'opacity-70 cursor-not-allowed' : ''
                     }`}
                   >
-                    {isLoading ? "Creating Account..." : "Register"}
+                    {isLoading ? "Logging in..." : "Admin Login"}
                   </button>
                 </form>
               </div>

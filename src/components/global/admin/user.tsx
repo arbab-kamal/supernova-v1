@@ -321,8 +321,10 @@ const UserManagement = () => {
               <tbody className="divide-y divide-gray-200">
                 {users.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm">{user.name || `${user.firstName || ''} ${user.lastName || ''}`}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
+                  <td className="px-6 py-4 text-sm">
+                    {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Unknown'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         user.role === 'Admin' || user.role_name === 'Admin' ? 'bg-purple-100 text-purple-800' :
