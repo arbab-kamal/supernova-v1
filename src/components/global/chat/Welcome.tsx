@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { User } from "lucide-react";
+import { useTheme } from "next-themes";
+import { getThemeColors } from "@/lib/constant";
 
 interface WelcomeUserProps {
   className?: string;
@@ -15,6 +17,9 @@ const WelcomeUser: React.FC<WelcomeUserProps> = ({ className = "" }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const colors = getThemeColors(isDarkMode);
 
   useEffect(() => {
     fetchUserData();
@@ -72,44 +77,77 @@ const WelcomeUser: React.FC<WelcomeUserProps> = ({ className = "" }) => {
     }
   };
 
+  const cardStyle = {
+    backgroundColor: colors.bg.tertiary,
+    borderRadius: "0.5rem",
+    padding: "1rem",
+  };
+
   if (loading) {
     return (
-      <div className={`p-4 rounded-lg bg-gray-100 ${className}`}>
-        <p className="text-sm text-gray-600">Loading...</p>
+      <div 
+        className={`p-4 rounded-lg ${className}`}
+        style={cardStyle}
+      >
+        <p style={{ color: colors.text.tertiary }}>Loading...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className={`p-4 rounded-lg bg-gray-100 ${className}`}>
-        <p className="text-sm text-red-400">Error fetching username</p>
+      <div 
+        className={`p-4 rounded-lg ${className}`}
+        style={cardStyle}
+      >
+        <p style={{ color: "#f87171" }}>Error fetching username</p>
       </div>
     );
   }
 
   return (
-    <div className={`p-4 rounded-lg bg-gray-100 ${className}`}>
+    <div 
+      className={`p-4 rounded-lg ${className}`}
+      style={cardStyle}
+    >
       {userData ? (
         <div className="flex items-center gap-3">
-          <User className="w-6 h-6 text-gray-700" />
+          <User 
+            className="w-6 h-6" 
+            style={{ color: colors.text.secondary }}
+          />
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">
+            <h2 
+              className="text-lg font-semibold"
+              style={{ color: colors.text.primary }}
+            >
               Welcome back, {userData.username}!
             </h2>
-            <p className="text-sm text-gray-600">
+            <p 
+              className="text-sm"
+              style={{ color: colors.text.secondary }}
+            >
               We&apos;re glad to see you again.
             </p>
           </div>
         </div>
       ) : (
         <div className="flex items-center gap-3">
-          <User className="w-6 h-6 text-gray-700" />
+          <User 
+            className="w-6 h-6" 
+            style={{ color: colors.text.secondary }}
+          />
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">
+            <h2 
+              className="text-lg font-semibold"
+              style={{ color: colors.text.primary }}
+            >
               Welcome, Guest!
             </h2>
-            <p className="text-sm text-gray-600">
+            <p 
+              className="text-sm"
+              style={{ color: colors.text.secondary }}
+            >
               Please log in to access all features.
             </p>
           </div>

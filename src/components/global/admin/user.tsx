@@ -11,6 +11,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 const UserManagement = () => {
   const [showAddUserForm, setShowAddUserForm] = useState(false);
@@ -52,6 +53,12 @@ const UserManagement = () => {
     } catch (error) {
       console.error("Error fetching roles and teams:", error);
       setFormError("Failed to load roles and teams. Please try again later.");
+      
+      // Show toast notification for the error
+      toast.error("Error Loading Data", {
+        description: "Failed to load roles and teams. Please try again.",
+        duration: 5000,
+      });
     }
   };
 
@@ -74,6 +81,12 @@ const UserManagement = () => {
         status: "Active" 
       }]);
       
+      // Show success toast
+      toast.success("User Added Successfully", {
+        description: `${fullName} has been added to the system.`,
+        duration: 3000,
+      });
+      
       // Reset form and close it
       setNewUser({ 
         firstName: "", 
@@ -86,7 +99,14 @@ const UserManagement = () => {
       setShowAddUserForm(false);
     } catch (error) {
       console.error("Error adding user:", error);
-      setFormError(error.response?.data?.message || "Failed to add user. Please try again.");
+      const errorMessage = error.response?.data?.message || "Failed to add user. Please try again.";
+      setFormError(errorMessage);
+      
+      // Show error toast
+      toast.error("Error Adding User", {
+        description: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -97,13 +117,22 @@ const UserManagement = () => {
     setNewUser({ ...newUser, [name]: value });
   };
 
+  const handleShowAddUserForm = () => {
+    setShowAddUserForm(true);
+    // Show toast when form is opened
+    toast("Add New User", {
+      description: "Please fill in all required fields.",
+      duration: 3000,
+    });
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">User Management</h1>
         <div className="flex gap-2">
           <button 
-            onClick={() => setShowAddUserForm(true)} 
+            onClick={handleShowAddUserForm} 
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             <UserPlus className="h-4 w-4" />
@@ -223,7 +252,13 @@ const UserManagement = () => {
               <div className="flex justify-end gap-2">
                 <button 
                   type="button" 
-                  onClick={() => setShowAddUserForm(false)} 
+                  onClick={() => {
+                    setShowAddUserForm(false);
+                    toast("Form Canceled", {
+                      description: "User creation was canceled.",
+                      duration: 3000,
+                    });
+                  }} 
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
                   disabled={loading}
                 >
@@ -277,7 +312,15 @@ const UserManagement = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right text-sm">
-                    <button className="text-gray-400 hover:text-gray-600">
+                    <button 
+                      className="text-gray-400 hover:text-gray-600"
+                      onClick={() => {
+                        toast("User Options", {
+                          description: `Options for ${user.name} will be available soon.`,
+                          duration: 3000,
+                        });
+                      }}
+                    >
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                   </td>

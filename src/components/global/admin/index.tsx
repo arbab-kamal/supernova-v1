@@ -83,7 +83,7 @@ const AdminPage = () => {
             onClick={() => setActiveComponent(null)}
             className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800"
           >
-            ← Back to Admin Dashboard
+            ← Admin Dashboard
           </button>
           {renderActiveComponent()}
         </div>

@@ -4,18 +4,17 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Zap, ArrowLeft, Save } from "lucide-react";
 import ChatBox from "../chat/index";
 import ProjectModal from "./modal";
+import axios from "axios";
+import { toast } from "sonner";
 
 const ProjectDashboard = () => {
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [isAddToProjectOpen, setIsAddToProjectOpen] = React.useState(false);
   const [selectedProject, setSelectedProject] = React.useState(null);
-
-  const projects = [
+  const [projects, setProjects] = React.useState([
     {
       id: 1,
       title: "Cybersecurity Risk Assessment",
-      description:
-        "Analyzed vulnerabilities in API authentication and mitigated security threats.",
       image: "/book.jpg",
       admin: "James Cargo",
       chatCount: 12,
@@ -24,14 +23,12 @@ const ProjectDashboard = () => {
     {
       id: 2,
       title: "Tech Risk Documentation",
-      description:
-        "Created a structured report on potential risks in microservices architecture.",
       image: "/book2.jpg",
       admin: "James Cargo",
       chatCount: 12,
       promptCount: 4,
     },
-  ];
+  ]);
 
   const handleProjectClick = (project) => {
     setSelectedProject(project);
@@ -45,6 +42,35 @@ const ProjectDashboard = () => {
     // Add your save logic here
     console.log("Adding to project:", projectId);
     setIsAddToProjectOpen(false);
+  };
+
+  const handleCreateProject = async (newProject) => {
+    try {
+      // Make POST request to create project API
+      const response = await axios.post("http://localhost:8080/createProject", {
+        projectTitle: newProject.title
+      });
+      
+      // Add new project to the projects list
+      const createdProject = {
+        id: response.data.id || Date.now(), // Use the returned ID or generate a temporary one
+        title: newProject.title,
+        image: "/book.jpg", // Default image
+        admin: "James Cargo", // Default admin
+        chatCount: 0,
+        promptCount: 0,
+      };
+      
+      setProjects([...projects, createdProject]);
+      
+      // Show success toast
+      toast.success("Project created successfully!");
+      setIsCreateOpen(false);
+    } catch (error) {
+      console.error("Error creating project:", error);
+      // Show error toast
+      toast.error("Failed to create project. Please try again.");
+    }
   };
 
   if (selectedProject) {
@@ -119,10 +145,7 @@ const ProjectDashboard = () => {
                   •••
                 </button>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
-                {project.description}
-              </p>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
                   <img
                     src="/1.jpeg"
@@ -151,6 +174,14 @@ const ProjectDashboard = () => {
           </div>
         ))}
       </div>
+      
+      {/* Add the modal for creating new projects */}
+      <ProjectModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreateProject={handleCreateProject}
+        hideDescription={true}
+      />
     </div>
   );
 };

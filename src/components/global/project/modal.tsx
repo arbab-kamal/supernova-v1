@@ -1,155 +1,138 @@
-import React from "react";
-import { MessageSquare, Zap } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+"use client";
+import React, { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { X } from "lucide-react";
 
-const ProjectModal = ({
-  isOpen,
-  onClose,
-  onCreateNew,
-  projects,
-  onAddToProject,
+const ProjectModal = ({ 
+  isOpen, 
+  onClose, 
+  projects, 
+  onAddToProject, 
+  onCreateProject 
 }) => {
-  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+  });
+  const [hasChanges, setHasChanges] = useState(false);
+  const modalRef = useRef(null);
 
-  const handleCreateSubmit = (e) => {
-    e.preventDefault();
-    // Add create project logic here
-    setIsCreateOpen(false);
-    onClose();
+  // Reset form data when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({ title: "", description: "" });
+      setHasChanges(false);
+    }
+  }, [isOpen]);
+
+  // Handle clicks outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target) && isOpen) {
+        if (hasChanges) {
+          // Save before closing if there are changes
+          handleSave();
+        } else {
+          onClose();
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, hasChanges, onClose]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setHasChanges(true);
   };
 
-  // Create Project Dialog
-  const CreateProjectDialog = () => (
-    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle>Create New Project</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => setIsCreateOpen(false)}
-            />
-          </div>
-        </DialogHeader>
+  const handleSave = () => {
+    if (onCreateProject) {
+      onCreateProject(formData);
+    } else if (onAddToProject && projects) {
+      // Assuming we're selecting the first project if this is a "Save to Project" modal
+      onAddToProject(projects[0].id);
+    }
+  };
 
-        <form onSubmit={handleCreateSubmit}>
-          <div className="mt-4">
-            <div className="border-2 border-dashed rounded-lg p-8 mb-4 flex flex-col items-center justify-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg mb-2 flex items-center justify-center">
-                <span className="text-blue-600">+</span>
-              </div>
-              <p className="text-sm text-gray-500">
-                Drag & Drop you image here,
-                <br />
-                or you can <span className="text-blue-600">browse</span> instead
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Project Title</Label>
-                <Input id="title" placeholder="Enter project title" required />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter project description"
-                  className="resize-none"
-                  required
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Create
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+  if (!isOpen) return null;
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle>Add to Project</DialogTitle>
-            <Button variant="ghost" className="h-8 w-8 p-0" onClick={onClose} />
-          </DialogHeader>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div 
+        ref={modalRef}
+        className="bg-white rounded-lg p-6 w-full max-w-md"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">
+            {onCreateProject ? "Create New Project" : "Save to Project"}
+          </h2>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-          <div className="flex items-center justify-between mb-4">
-            {/* <span>Add to Project</span> */}
-            <Button
-              variant="link"
-              className="text-blue-600 p-0"
-              onClick={() => {
-                onClose();
-                setIsCreateOpen(true);
-              }}
-            >
-              + Create New Project
-            </Button>
-          </div>
-
+        {onCreateProject ? (
+          // Create project form
           <div className="space-y-4">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={project.image}
-                    alt={project.title}
-                    className="w-12 h-12 rounded object-cover"
-                  />
-                  <div>
-                    <h3 className="font-medium">{project.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {project.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="w-4 h-4" />
-                    <span>{project.chatCount}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Zap className="w-4 h-4" />
-                    <span>{project.promptCount}</span>
-                  </div>
-                  <Button
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => onAddToProject(project.id)}
-                  >
-                    +Add
-                  </Button>
-                </div>
-              </div>
-            ))}
+            <div>
+              <label className="block text-sm font-medium mb-1">Project Title</label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full p-2 border rounded-md"
+                placeholder="Enter project title"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                className="w-full p-2 border rounded-md h-24"
+                placeholder="Enter project description"
+              />
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
-      <CreateProjectDialog />
-    </>
+        ) : (
+          // Save to project selection
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">Select a project to save to:</p>
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {projects && projects.map((project) => (
+                <div 
+                  key={project.id}
+                  className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                  onClick={() => onAddToProject(project.id)}
+                >
+                  <h3 className="font-medium">{project.title}</h3>
+                  <p className="text-sm text-gray-600 truncate">{project.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white" 
+            onClick={handleSave}
+          >
+            {onCreateProject ? "Create Project" : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 };
 
