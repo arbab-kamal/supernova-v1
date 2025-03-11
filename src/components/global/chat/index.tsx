@@ -29,6 +29,9 @@ const Chatbox = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Set initial chatId when component mounts
+    setChatId(prev => prev === 0 ? 1 : prev + 1);
+    
     const fetchUserName = async () => {
       try {
         const res = await fetch("http://localhost:8080/userName");
@@ -46,13 +49,6 @@ const Chatbox = () => {
     fetchUserName();
   }, []);
 
-  useEffect(() => {
-    // Increment chatId when starting a new conversation
-    if (messages.length === 0) {
-      setChatId(prev => prev === 0 ? 1 : prev + 1);
-    }
-  }, [messages.length === 0]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -61,17 +57,25 @@ const Chatbox = () => {
     scrollToBottom();
   }, [messages]);
 
+  const startNewChat = () => {
+    setMessages([]);
+    setChatId(prev => prev + 1);
+  };
+
   const fetchAIResponse = async (query: string) => {
     setIsLoading(true);
     try {
       const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-      const projectName = selectedProject ? selectedProject.name :"";
+      const projectName = selectedProject?.name || "";
+      
+      // Log the request parameters for debugging
+      console.log(`Sending request with: query=${query}, chatId=${chatId}, projectName=${projectName}`);
       
       const response = await axios.get(`${baseURL}/rag`, {
         params: {
-          query: query,
-          chatId: chatId,
-          projectName: projectName
+          query,
+          chatId,
+          projectName
         },
         headers: {
           'Content-Type': 'application/json'
@@ -81,6 +85,10 @@ const Chatbox = () => {
       return response.data;
     } catch (error) {
       console.error("Error fetching RAG response:", error);
+      // Provide more specific error messages based on the error type
+      if (axios.isAxiosError(error) && error.response) {
+        return `Error: ${error.response.status} - ${error.response.statusText}`;
+      }
       return "Sorry, I couldn't process your request. Please try again.";
     } finally {
       setIsLoading(false);
