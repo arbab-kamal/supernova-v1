@@ -14,34 +14,30 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 
-const getUploadURL = (projectName) => `http://localhost:8080/upload?projectName=${encodeURIComponent(projectName)}`;
+// Updated to use a simple URL without query parameters
+const getUploadURL = () => `http://localhost:8080/upload`;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const MultiplePDFUploader = () => {
+const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName }) => {
   // Get the selected project from Redux store
   const selectedProject = useSelector(selectCurrentProject);
-  const projectName = selectedProject?.name || "default";
+  // Use provided prop first, then redux state, then fallback to default
+  const projectName = propProjectName || 
+                     (typeof selectedProject === 'string' ? selectedProject : "default");
   
   const router = useRouter();
-  const [uploadedFiles, setUploadedFiles] = useState<
-    Array<{
-      file: File;
-      progress: number;
-      status: "idle" | "uploading" | "completed" | "error";
-      error?: string;
-    }>
-  >([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
-  const getProgressColor = (progress: number) => {
+  const getProgressColor = (progress) => {
     if (progress <= 30) return "bg-red-500";
     if (progress <= 70) return "bg-yellow-500";
     return "bg-green-500";
   };
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = (file) => {
     if (file.type !== "application/pdf") {
       return "Invalid file type. Please upload PDF files only.";
     }
@@ -51,13 +47,13 @@ const MultiplePDFUploader = () => {
     return null;
   };
 
-  const uploadFile = useCallback(async (file: File, fileIndex: number) => {
+  const uploadFile = useCallback(async (file, fileIndex) => {
     setUploadedFiles((prev) =>
       prev.map((item, index) =>
         index === fileIndex
           ? {
               ...item,
-              status: "uploading" as const,
+              status: "uploading",
               progress: 0,
               error: undefined,
             }
@@ -67,9 +63,14 @@ const MultiplePDFUploader = () => {
 
     const formData = new FormData();
     formData.append("file", file);
+    // Add projectName as part of the form data instead of the URL
+    formData.append("projectName", projectName);
 
     try {
-      const response = await axios.post(getUploadURL(projectName), formData, {
+      console.log(`Uploading to: ${getUploadURL()}`);
+      console.log(`Project name: ${projectName}`);
+      
+      const response = await axios.post(getUploadURL(), formData, {
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round(
@@ -82,20 +83,23 @@ const MultiplePDFUploader = () => {
             );
           }
         },
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        withCredentials: true,
       });
 
       if (response.status === 200) {
         setUploadedFiles((prev) =>
           prev.map((item, index) =>
             index === fileIndex
-              ? { ...item, status: "completed" as const, progress: 100 }
+              ? { ...item, status: "completed", progress: 100 }
               : item
           )
         );
         toast.success(`${file.name} uploaded successfully`);
+
+        // Call the onUploadComplete callback if provided
+        if (typeof onUploadComplete === 'function') {
+          onUploadComplete();
+        }
 
         // Refresh the page after a short delay
         setTimeout(() => {
@@ -103,14 +107,18 @@ const MultiplePDFUploader = () => {
         }, 2000); // Delay for user to see the toast
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Upload failed";
+      console.error("Full upload error:", error);
+      
+      const errorMessage = error.response 
+        ? `Server error: ${error.response.status} ${error.response.statusText || ''} - ${error.response.data || ''}`
+        : error.message || "Upload failed";
+      
       setUploadedFiles((prev) =>
         prev.map((item, index) =>
           index === fileIndex
             ? {
                 ...item,
-                status: "error" as const,
+                status: "error",
                 error: errorMessage,
                 progress: 0,
               }
@@ -118,14 +126,13 @@ const MultiplePDFUploader = () => {
         )
       );
       toast.error(`Failed to upload ${file.name}: ${errorMessage}`);
-      console.error("Upload error:", error);
     }
-  }, [projectName, router]);
+  }, [projectName, router, onUploadComplete]);
 
   const handleFiles = useCallback(
-    (files: File[]) => {
-      const validFiles: File[] = [];
-      const errors: string[] = [];
+    (files) => {
+      const validFiles = [];
+      const errors = [];
 
       files.forEach((file) => {
         const error = validateFile(file);
@@ -145,7 +152,7 @@ const MultiplePDFUploader = () => {
         const newFiles = validFiles.map((file) => ({
           file,
           progress: 0,
-          status: "idle" as const,
+          status: "idle",
         }));
 
         setUploadedFiles((prev) => [...prev, ...newFiles]);
@@ -160,7 +167,7 @@ const MultiplePDFUploader = () => {
   );
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    (e) => {
       e.preventDefault();
       setIsDragging(false);
       const droppedFiles = Array.from(e.dataTransfer.files);
@@ -169,17 +176,17 @@ const MultiplePDFUploader = () => {
     [handleFiles]
   );
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
   }, []);
 
-  const handleRemoveFile = useCallback((index: number) => {
+  const handleRemoveFile = useCallback((index) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 
     if (fileInputRef.current) {
@@ -188,7 +195,7 @@ const MultiplePDFUploader = () => {
   }, []);
 
   const truncateFileName = useCallback(
-    (name: string, maxLength: number = 20) => {
+    (name, maxLength = 20) => {
       if (name.length <= maxLength) return name;
       return `${name.slice(0, maxLength)}...`;
     },
