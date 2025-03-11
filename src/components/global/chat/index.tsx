@@ -20,7 +20,7 @@ const Chatbox = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userInitial, setUserInitial] = useState<string>("");
-  const [chatId, setChatId] = useState<number>(0);
+  const [chatId, setChatId] = useState<number>(1); // Start with 1 to match Long type expectation
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
@@ -29,9 +29,6 @@ const Chatbox = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Set initial chatId when component mounts
-    setChatId(prev => prev === 0 ? 1 : prev + 1);
-    
     const fetchUserName = async () => {
       try {
         const res = await fetch("http://localhost:8080/userName");
@@ -66,10 +63,10 @@ const Chatbox = () => {
     setIsLoading(true);
     try {
       const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+      // Ensure projectName is never undefined or null
       const projectName = selectedProject?.name || "";
       
-      // Log the request parameters for debugging
-      console.log(`Sending request with: query=${query}, chatId=${chatId}, projectName=${projectName}`);
+      console.log(`Sending request: query=${query}, chatId=${chatId}, projectName=${projectName}`);
       
       const response = await axios.get(`${baseURL}/rag`, {
         params: {
@@ -85,9 +82,9 @@ const Chatbox = () => {
       return response.data;
     } catch (error) {
       console.error("Error fetching RAG response:", error);
-      // Provide more specific error messages based on the error type
       if (axios.isAxiosError(error) && error.response) {
-        return `Error: ${error.response.status} - ${error.response.statusText}`;
+        console.error(`Server responded with ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+        return `Error: ${error.response.status} - Please try again or check your input.`;
       }
       return "Sorry, I couldn't process your request. Please try again.";
     } finally {
@@ -103,10 +100,17 @@ const Chatbox = () => {
       setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
 
-      const aiResponse = await fetchAIResponse(inputValue);
-      const aiMessage = { text: aiResponse, sender: "ai" };
-      //@ts-ignore
-      setMessages((prev) => [...prev, aiMessage]);
+      try {
+        const aiResponse = await fetchAIResponse(inputValue);
+        const aiMessage = { text: aiResponse || "No response received", sender: "ai" };
+        //@ts-ignore
+        setMessages((prev) => [...prev, aiMessage]);
+      } catch (error) {
+        console.error("Error handling submission:", error);
+        const errorMessage = { text: "An error occurred while processing your request.", sender: "ai" };
+        //@ts-ignore
+        setMessages((prev) => [...prev, errorMessage]);
+      }
     }
   };
 
@@ -138,7 +142,7 @@ const Chatbox = () => {
                 className="max-w-sm text-sm"
                 style={{ color: colors.text.secondary }}
               >
-                Feel free to ask any questions!
+                Feel free to ask any questions about your project!
               </div>
             </div>
           </div>
