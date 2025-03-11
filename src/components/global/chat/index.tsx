@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send } from "lucide-react";
 import Typewriter from "./typewriter";
 import WelcomeUser from "./Welcome";
@@ -27,6 +27,55 @@ const Chatbox = () => {
   const selectedProject = useSelector(selectCurrentProject);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Function to get project name - robust method to handle different formats
+  const getProjectName = useCallback(() => {
+    // Handle string case
+    if (typeof selectedProject === "string" && selectedProject.trim() !== "") {
+      console.log("Using project name from Redux (string):", selectedProject);
+      return selectedProject.trim();
+    }
+    
+    // Handle object with name property
+    if (
+      typeof selectedProject === "object" && 
+      selectedProject !== null &&
+      selectedProject.name && 
+      typeof selectedProject.name === "string" && 
+      selectedProject.name.trim() !== ""
+    ) {
+      console.log("Using project name from Redux (object.name):", selectedProject.name);
+      return selectedProject.name.trim();
+    }
+    
+    // Handle object with title property (matching backend ProjectEntity.projectTitle)
+    if (
+      typeof selectedProject === "object" && 
+      selectedProject !== null &&
+      selectedProject.title && 
+      typeof selectedProject.title === "string" && 
+      selectedProject.title.trim() !== ""
+    ) {
+      console.log("Using project title from Redux (object.title):", selectedProject.title);
+      return selectedProject.title.trim();
+    }
+    
+    // Handle object with projectTitle property (exact match to backend field)
+    if (
+      typeof selectedProject === "object" && 
+      selectedProject !== null &&
+      selectedProject.projectTitle && 
+      typeof selectedProject.projectTitle === "string" && 
+      selectedProject.projectTitle.trim() !== ""
+    ) {
+      console.log("Using projectTitle from Redux:", selectedProject.projectTitle);
+      return selectedProject.projectTitle.trim();
+    }
+    
+    // Fallback with warning
+    console.warn("No valid project name found, using 'default'. This may cause backend errors if no project with this title exists.");
+    return "default";
+  }, [selectedProject]);
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -63,8 +112,8 @@ const Chatbox = () => {
     setIsLoading(true);
     try {
       const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-      // Ensure projectName is never undefined or null
-      const projectName = selectedProject?.name || "";
+      // Get project name using the robust method
+      const projectName = getProjectName();
       
       console.log(`Sending request: query=${query}, chatId=${chatId}, projectName=${projectName}`);
       
