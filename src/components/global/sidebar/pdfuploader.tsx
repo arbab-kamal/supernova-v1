@@ -22,16 +22,29 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
   // Get the selected project from Redux store
   const selectedProject = useSelector(selectCurrentProject);
   
-  // Use provided prop first. If not provided, then check if selectedProject is an object with a name property.
-  // Otherwise, if selectedProject is a string, use it. Else, fallback to "default".
-  const projectName =
-    typeof propProjectName === "string"
-      ? propProjectName
-      : (typeof selectedProject === "object" && selectedProject !== null && selectedProject.name)
-      ? selectedProject.name
-      : typeof selectedProject === "string"
-      ? selectedProject
-      : "default";
+  // More reliable projectName determination
+  let projectName = "default";
+  
+  if (typeof propProjectName === "string" && propProjectName) {
+    // Use prop if provided and it's a non-empty string
+    projectName = propProjectName;
+  } else if (selectedProject) {
+    if (typeof selectedProject === "string") {
+      // If selectedProject is a string, use it directly
+      projectName = selectedProject;
+    } else if (typeof selectedProject === "object" && selectedProject.name) {
+      // If selectedProject is an object with a name property, use that
+      projectName = selectedProject.name;
+    }
+  }
+  
+  // Add a validation check to ensure projectName is a string
+  if (typeof projectName !== "string" || !projectName) {
+    projectName = "default";
+  }
+  
+  // Log the actual projectName for debugging
+  console.log("Final projectName for upload:", projectName);
 
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState([]);
