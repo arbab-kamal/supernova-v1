@@ -6,6 +6,9 @@ import Typewriter from "./typewriter";
 import WelcomeUser from "./Welcome";
 import { useTheme } from "next-themes";
 import { getThemeColors } from "@/lib/constant";
+import axios from "axios";
+import { useSelector } from "react-redux";
+import { selectCurrentProject } from "@/store/projectSlice";
 
 interface Message {
   text: string;
@@ -17,9 +20,11 @@ const Chatbox = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userInitial, setUserInitial] = useState<string>("");
+  const [chatId, setChatId] = useState<number>(0);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
+  const selectedProject = useSelector(selectCurrentProject);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +46,13 @@ const Chatbox = () => {
     fetchUserName();
   }, []);
 
+  useEffect(() => {
+    // Increment chatId when starting a new conversation
+    if (messages.length === 0) {
+      setChatId(prev => prev === 0 ? 1 : prev + 1);
+    }
+  }, [messages.length === 0]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -52,20 +64,21 @@ const Chatbox = () => {
   const fetchAIResponse = async (query: string) => {
     setIsLoading(true);
     try {
-      const encodedQuery = encodeURIComponent(query);
-      const url = `${
-        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080"
-      }/rag?query=${encodedQuery}`;
-
-      const res = await fetch(url, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
+      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+      const projectName = selectedProject ? selectedProject.name :"";
+      
+      const response = await axios.get(`${baseURL}/rag`, {
+        params: {
+          query: query,
+          chatId: chatId,
+          projectName: projectName
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (!res.ok) throw new Error(`Error: ${res.status}`);
-
-      const data = await res.text();
-      return data;
+      return response.data;
     } catch (error) {
       console.error("Error fetching RAG response:", error);
       return "Sorry, I couldn't process your request. Please try again.";
