@@ -22,23 +22,23 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
   const selectedProject = useSelector(selectCurrentProject);
   const router = useRouter();
   
-  // Simplified project name resolution
+  // Function to get project name - crucial for backend compatibility
   const getProjectName = useCallback(() => {
-    // First priority: Use prop if it exists and is valid
+    // Check prop first (highest priority)
     if (propProjectName && typeof propProjectName === "string" && propProjectName.trim() !== "") {
       console.log("Using project name from props:", propProjectName);
       return propProjectName.trim();
     }
     
-    // Second priority: Check selectedProject
+    // Then check Redux state
     if (selectedProject) {
-      // If selectedProject is a string
+      // Handle string case
       if (typeof selectedProject === "string" && selectedProject.trim() !== "") {
         console.log("Using project name from Redux (string):", selectedProject);
         return selectedProject.trim();
       }
       
-      // If selectedProject is an object with name property
+      // Handle object with name property
       if (
         typeof selectedProject === "object" && 
         selectedProject !== null &&
@@ -46,25 +46,37 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
         typeof selectedProject.name === "string" && 
         selectedProject.name.trim() !== ""
       ) {
-        console.log("Using project name from Redux (object):", selectedProject.name);
+        console.log("Using project name from Redux (object.name):", selectedProject.name);
         return selectedProject.name.trim();
       }
       
-      // If selectedProject has an id property
+      // Handle object with title property (matching backend ProjectEntity.projectTitle)
       if (
         typeof selectedProject === "object" && 
         selectedProject !== null &&
-        selectedProject.id && 
-        typeof selectedProject.id === "string" && 
-        selectedProject.id.trim() !== ""
+        selectedProject.title && 
+        typeof selectedProject.title === "string" && 
+        selectedProject.title.trim() !== ""
       ) {
-        console.log("Using project ID from Redux as name:", selectedProject.id);
-        return selectedProject.id.trim();
+        console.log("Using project title from Redux (object.title):", selectedProject.title);
+        return selectedProject.title.trim();
+      }
+      
+      // Handle object with projectTitle property (exact match to backend field)
+      if (
+        typeof selectedProject === "object" && 
+        selectedProject !== null &&
+        selectedProject.projectTitle && 
+        typeof selectedProject.projectTitle === "string" && 
+        selectedProject.projectTitle.trim() !== ""
+      ) {
+        console.log("Using projectTitle from Redux:", selectedProject.projectTitle);
+        return selectedProject.projectTitle.trim();
       }
     }
     
-    // Last resort: Use default and log the issue
-    console.warn("Failed to determine project name, using default. Props:", propProjectName, "Redux state:", selectedProject);
+    // Fallback with warning
+    console.warn("No valid project name found, using 'default'. This may cause backend errors if no project with this title exists.");
     return "default";
   }, [propProjectName, selectedProject]);
 
@@ -104,16 +116,18 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
     );
 
     const formData = new FormData();
-    formData.append("file", file);
-
+    formData.append("file", file); // Name must match @RequestParam("file")
+    
     try {
-      // Get project name for this upload
+      // Get project name
       const projectName = getProjectName();
       
-      // Debug information
-      console.log(`Uploading to project: "${projectName}"`);
-      
+      // IMPORTANT: Using the exact URL pattern expected by the backend
+      // The backend expects projectName as a query parameter
       const uploadURL = `${BASE_UPLOAD_URL}?projectName=${encodeURIComponent(projectName)}`;
+      
+      console.log(`Uploading to: ${uploadURL}`);
+      console.log(`Project name: ${projectName}`);
       
       const response = await axios.post(uploadURL, formData, {
         onUploadProgress: (progressEvent) => {
@@ -129,6 +143,10 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
           }
         },
         withCredentials: true,
+        // Add specific headers if needed by your backend
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
       });
 
       if (response.status === 200) {
@@ -146,17 +164,29 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
           onUploadComplete();
         }
 
-        // Refresh the page after a short delay for the user to see the toast
+        // Refresh the page after a short delay
         setTimeout(() => {
           router.refresh();
         }, 2000);
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error("Upload error details:", error);
       
-      const errorMessage = error.response 
-        ? `Server error: ${error.response.status} ${error.response.statusText || ''} - ${error.response.data || ''}`
-        : error.message || "Upload failed";
+      let errorMessage = "Upload failed";
+      
+      // Extract helpful error information for debugging
+      if (error.response) {
+        errorMessage = `Server error: ${error.response.status} - ${error.response.data || 'Unknown error'}`;
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+      } else if (error.request) {
+        errorMessage = "No response received from server";
+        console.error("Request made but no response received:", error.request);
+      } else {
+        errorMessage = `Error: ${error.message}`;
+        console.error("Error message:", error.message);
+      }
       
       setUploadedFiles((prev) =>
         prev.map((item, index) =>
