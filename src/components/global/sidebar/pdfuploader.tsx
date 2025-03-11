@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Upload, FileIcon, Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,13 +10,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 const PDF_UPLOADER = "http://localhost:8080/upload";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const MultiplePDFUploader = () => {
+const MultiplePDFUploader = ({ projectName = "default" }) => {
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState<
     Array<{
@@ -61,47 +61,39 @@ const MultiplePDFUploader = () => {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("projectName", projectName);
 
     try {
-      const xhr = new XMLHttpRequest();
+      const response = await axios.post(PDF_UPLOADER, formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round(
+              (progressEvent.loaded / progressEvent.total) * 100
+            );
+            setUploadedFiles((prev) =>
+              prev.map((item, index) =>
+                index === fileIndex ? { ...item, progress } : item
+              )
+            );
+          }
+        },
+      });
 
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          setUploadedFiles((prev) =>
-            prev.map((item, index) =>
-              index === fileIndex ? { ...item, progress } : item
-            )
-          );
-        }
-      };
+      if (response.status === 200) {
+        setUploadedFiles((prev) =>
+          prev.map((item, index) =>
+            index === fileIndex
+              ? { ...item, status: "completed" as const, progress: 100 }
+              : item
+          )
+        );
+        toast.success(`${file.name} uploaded successfully`);
 
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          setUploadedFiles((prev) =>
-            prev.map((item, index) =>
-              index === fileIndex
-                ? { ...item, status: "completed" as const, progress: 100 }
-                : item
-            )
-          );
-          toast.success(`${file.name} uploaded successfully`);
-
-          // Refresh the page after a short delay
-          setTimeout(() => {
-            router.refresh(); // Efficiently refreshes the page in Next.js
-          }, 2000); // Delay for user to see the toast
-        } else {
-          throw new Error(`Upload failed with status: ${xhr.status}`);
-        }
-      };
-
-      xhr.onerror = () => {
-        throw new Error("Upload failed due to network error");
-      };
-
-      xhr.open("POST", PDF_UPLOADER);
-      await xhr.send(formData);
+        // Refresh the page after a short delay
+        setTimeout(() => {
+          router.refresh(); // Efficiently refreshes the page in Next.js
+        }, 2000); // Delay for user to see the toast
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Upload failed";
@@ -120,7 +112,7 @@ const MultiplePDFUploader = () => {
       toast.error(`Failed to upload ${file.name}: ${errorMessage}`);
       console.error("Upload error:", error);
     }
-  }, []);
+  }, [projectName]);
 
   const handleFiles = useCallback(
     (files: File[]) => {
