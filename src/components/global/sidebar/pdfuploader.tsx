@@ -21,10 +21,18 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName }) => {
   // Get the selected project from Redux store
   const selectedProject = useSelector(selectCurrentProject);
-  // Use provided prop first, then redux state, then fallback to default
-  const projectName = propProjectName || 
-                     (typeof selectedProject === 'string' ? selectedProject : "default");
   
+  // Use provided prop first. If not provided, then check if selectedProject is an object with a name property.
+  // Otherwise, if selectedProject is a string, use it. Else, fallback to "default".
+  const projectName =
+    typeof propProjectName === "string"
+      ? propProjectName
+      : (typeof selectedProject === "object" && selectedProject !== null && selectedProject.name)
+      ? selectedProject.name
+      : typeof selectedProject === "string"
+      ? selectedProject
+      : "default";
+
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +71,7 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
 
     const formData = new FormData();
     formData.append("file", file);
-    // Add projectName as part of the form data instead of the URL
+    // Append projectName (now a proper string) to the FormData
     formData.append("projectName", projectName);
 
     try {
@@ -97,14 +105,14 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
         toast.success(`${file.name} uploaded successfully`);
 
         // Call the onUploadComplete callback if provided
-        if (typeof onUploadComplete === 'function') {
+        if (typeof onUploadComplete === "function") {
           onUploadComplete();
         }
 
-        // Refresh the page after a short delay
+        // Refresh the page after a short delay for the user to see the toast
         setTimeout(() => {
-          router.refresh(); // Efficiently refreshes the page in Next.js
-        }, 2000); // Delay for user to see the toast
+          router.refresh();
+        }, 2000);
       }
     } catch (error) {
       console.error("Full upload error:", error);
@@ -228,14 +236,11 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
               aria-label="PDF files input"
             />
             <div
-              className={`
-                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition
-                ${
-                  isDragging
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
-                }
-              `}
+              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition ${
+                isDragging
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+              }`}
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
