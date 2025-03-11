@@ -96,16 +96,16 @@ const Sidebar = () => {
       id: "project",
       icon: FolderGit2,
       label: "Project",
-      href: "/chat/project",
+      href: "/project",
     },
-    { id: "shared", icon: Share2, label: "Shared", href: "/chat/shared" },
+    // { id: "shared", icon: Share2, label: "Shared", href: "/chat/shared" },
     {
       id: "bookmark",
       icon: Bookmark,
       label: "Bookmark",
       href: "/chat/bookmark",
     },
-    { id: "archive", icon: Archive, label: "Archive", href: "/chat/archive" },
+    // { id: "archive", icon: Archive, label: "Archive", href: "/chat/archive" },
   ];
 
   return (
@@ -121,7 +121,7 @@ const Sidebar = () => {
       {/* New Chat Button */}
       <button
         onClick={handleNewChat}
-        className="flex items-center gap-2 w-full p-3 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-800 mb-4"
+        className="flex items-center gap-2 w-full p-3 rounded-lg hover:bg-white/10 text-left  mb-4"
       >
         <PlusCircle className="w-5 h-5" />
         <span>New Chat</span>

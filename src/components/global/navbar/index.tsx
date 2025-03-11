@@ -112,7 +112,7 @@ const ArticleNavbar = () => {
               title: currentProject.title
             } : null}
           />
-          <ProjectModal />
+          {/* <ProjectModal /> */}
 
           {/* Theme Selector */}
           <DropdownMenu>
