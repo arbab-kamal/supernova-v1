@@ -10,7 +10,7 @@ const ProjectHeader = () => {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push('/dashboard');
+    router.push('/project');
   };
 
   if (!project) {
@@ -25,15 +25,11 @@ const ProjectHeader = () => {
       >
         <ArrowLeft className="w-5 h-5" />
       </button>
-      <div className="flex items-center">
-        <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center text-blue-600 mr-2">
-          {project.title.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <h3 className="font-medium">{project.title}</h3>
-          <p className="text-xs text-gray-500">Project</p>
-        </div>
-      </div>
+      <div className="flex items-center space-x-2">
+           <h3 className="font-medium">{project.title}</h3>
+        <p className="text-xs text-gray-500">Project</p>
+    </div>
+
     </div>
   );
 };

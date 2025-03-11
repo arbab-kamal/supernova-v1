@@ -2,6 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { Upload, FileIcon, Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useSelector } from "react-redux";
+import { selectCurrentProject } from "@/store/projectSlice";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,11 +14,14 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 
-// Keep using query parameters approach
 const getUploadURL = (projectName) => `http://localhost:8080/upload?projectName=${encodeURIComponent(projectName)}`;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const MultiplePDFUploader = ({ projectName = "default" }) => {
+const MultiplePDFUploader = () => {
+  // Get the selected project from Redux store
+  const selectedProject = useSelector(selectCurrentProject);
+  const projectName = selectedProject?.name || "default";
+  
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState<
     Array<{
@@ -62,7 +67,6 @@ const MultiplePDFUploader = ({ projectName = "default" }) => {
 
     const formData = new FormData();
     formData.append("file", file);
-    // No need to add projectName to formData as it's in the URL
 
     try {
       const response = await axios.post(getUploadURL(projectName), formData, {
