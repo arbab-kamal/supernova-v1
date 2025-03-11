@@ -1,3 +1,4 @@
+//src/components/global/project/projecttitle.tsx
 "use client";
 import React from "react";
 import { useSelector } from "react-redux";

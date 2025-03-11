@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import {
   FileText,
-  Folder,
   Search,
   Square,
   CheckSquare,
@@ -11,7 +10,21 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import axios from "axios";
+import { useSelector } from "react-redux";
+import { selectCurrentProject } from "@/store/projectSlice";
 import MultiplePDFUploader from "@/components/global/sidebar/pdfuploader";
+import ProjectHeader from "@/components/global/project/projecttitle";
+
+// Shadcn UI Table Components
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Document {
   id: number;
@@ -29,21 +42,29 @@ const DocumentListPage = () => {
   const [folders, setFolders] = useState<
     { id: number; name: string; count: number }[]
   >([]);
+  
+  // Get the selected project from Redux store
+  const selectedProject = useSelector(selectCurrentProject);
 
-  // Fetch files from backend
+  // Fetch files from backend using axios
   const fetchFiles = async () => {
+    if (!selectedProject) {
+      setError("No project selected");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("http://localhost:8080/files", {
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch files");
-      }
-
-      const fileNames = await response.json();
+      
+      const response = await axios.get(
+        `http://localhost:8080/getDocuments?projectName=${selectedProject}`, 
+        { withCredentials: true }
+      );
+      
+      // Assuming the response data structure matches what we need
+      const fileNames = response.data;
+      
       const transformedDocs = fileNames.map(
         (fileName: string, index: number) => ({
           id: index + 1,
@@ -66,7 +87,9 @@ const DocumentListPage = () => {
       setFolders(folderData);
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch files";
+        axios.isAxiosError(err) 
+          ? err.response?.data?.message || err.message
+          : "Failed to fetch files";
       setError(errorMessage);
       console.error("Error fetching files:", errorMessage);
     } finally {
@@ -76,24 +99,30 @@ const DocumentListPage = () => {
 
   // Delete a single file
   const deleteFile = async (fileName: string) => {
+    if (!selectedProject) {
+      setError("No project selected");
+      return;
+    }
+
     try {
-      const response = await fetch(
-        `http://localhost:8080/delete?fileName=${encodeURIComponent(fileName)}`,
-        {
-          method: "DELETE",
-          credentials: "include",
+      const response = await axios.delete(
+        `http://localhost:8080/delete`, 
+        { 
+          params: { 
+            fileName: fileName,
+            projectName: selectedProject 
+          },
+          withCredentials: true 
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete ${fileName}`);
-      }
 
       await fetchFiles(); // Refresh the file list
       setError(null);
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to delete file";
+        axios.isAxiosError(err) 
+          ? err.response?.data?.message || err.message
+          : "Failed to delete file";
       setError(errorMessage);
       console.error("Error deleting file:", errorMessage);
     }
@@ -115,7 +144,9 @@ const DocumentListPage = () => {
       setSelectedDocs(new Set()); // Clear selection after deletion
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to delete selected files";
+        axios.isAxiosError(err) 
+          ? err.response?.data?.message || err.message
+          : "Failed to delete selected files";
       setError(errorMessage);
       console.error("Error deleting selected files:", errorMessage);
     }
@@ -123,7 +154,7 @@ const DocumentListPage = () => {
 
   useEffect(() => {
     fetchFiles();
-  }, []);
+  }, [selectedProject]); // Re-fetch when selected project changes
 
   const toggleDocument = (docId: number) => {
     const newSelected = new Set(selectedDocs);
@@ -156,9 +187,14 @@ const DocumentListPage = () => {
             </Link>
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {selectedProject ? `${selectedProject} Documents` : "Documents"}
+            </h1>
             <div className="flex items-center space-x-4">
-              <MultiplePDFUploader onUploadComplete={fetchFiles} />
+              <MultiplePDFUploader 
+                onUploadComplete={fetchFiles} 
+                projectName={selectedProject}
+              />
 
               {selectedDocs.size > 0 && (
                 <button
@@ -184,6 +220,12 @@ const DocumentListPage = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        {!selectedProject && (
+          <div className="mb-4 p-4 bg-yellow-100 text-yellow-700 rounded-lg">
+            No project selected. Please select a project to view documents.
+          </div>
+        )}
+        
         {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg flex items-center justify-between">
             <span>{error}</span>
@@ -200,29 +242,7 @@ const DocumentListPage = () => {
         ) : (
           <>
             <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-4 text-gray-900">
-                Folders
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {folders.map((folder) => (
-                  <div
-                    key={folder.id}
-                    className="p-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Folder className="h-6 w-6 text-blue-500" />
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          {folder.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {folder.count} items
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ProjectHeader />
             </section>
 
             <section>
@@ -231,16 +251,17 @@ const DocumentListPage = () => {
               </h2>
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 hover:bg-gray-50">
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           <div className="flex items-center">
                             <button
                               onClick={toggleAll}
                               className="mr-3 focus:outline-none"
+                              disabled={documents.length === 0}
                             >
-                              {selectedDocs.size === documents.length ? (
+                              {selectedDocs.size === documents.length && documents.length > 0 ? (
                                 <CheckSquare className="h-4 w-4 text-blue-500" />
                               ) : (
                                 <Square className="h-4 w-4 text-gray-400" />
@@ -248,69 +269,77 @@ const DocumentListPage = () => {
                             </button>
                             Name
                           </div>
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Type
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Size
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Modified
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {documents.map((doc) => (
-                        <tr key={doc.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center">
-                              <button
-                                onClick={() => toggleDocument(doc.id)}
-                                className="mr-3 focus:outline-none"
-                              >
-                                {selectedDocs.has(doc.id) ? (
-                                  <CheckSquare className="h-4 w-4 text-blue-500" />
-                                ) : (
-                                  <Square className="h-4 w-4 text-gray-400" />
-                                )}
-                              </button>
-                              <FileText className="h-5 w-5 text-gray-400 mr-3" />
-                              <span className="text-sm text-gray-900">
-                                {doc.title}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {documents.length > 0 ? (
+                        documents.map((doc) => (
+                          <TableRow key={doc.id} className="hover:bg-gray-50">
+                            <TableCell className="px-6 py-4">
+                              <div className="flex items-center">
+                                <button
+                                  onClick={() => toggleDocument(doc.id)}
+                                  className="mr-3 focus:outline-none"
+                                >
+                                  {selectedDocs.has(doc.id) ? (
+                                    <CheckSquare className="h-4 w-4 text-blue-500" />
+                                  ) : (
+                                    <Square className="h-4 w-4 text-gray-400" />
+                                  )}
+                                </button>
+                                <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                                <span className="text-sm text-gray-900">
+                                  {doc.title}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <span className="text-sm text-gray-500 uppercase">
+                                {doc.type}
                               </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-500 uppercase">
-                              {doc.type}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-500">
-                              {doc.size}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-500">
-                              {doc.modified}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => deleteFile(doc.title)}
-                              className="text-red-500 hover:text-red-700 focus:outline-none"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <span className="text-sm text-gray-500">
+                                {doc.size}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <span className="text-sm text-gray-500">
+                                {doc.modified}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 py-4 text-right">
+                              <button
+                                onClick={() => deleteFile(doc.title)}
+                                className="text-red-500 hover:text-red-700 focus:outline-none"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                            No documents found.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </section>
