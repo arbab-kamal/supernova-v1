@@ -6,133 +6,24 @@ import Link from "next/link";
 const PromptAssistPage = () => {
   const categories = [
     {
-      title: "Writing",
+      title: "Riskgpt",
       items: [
         {
-          icon: "📝",
-          name: "Articles",
-          description: "Generate helpful articles on any topics you want",
-        },
-        {
-          icon: "📚",
-          name: "Academic Writer",
-          description: "Create academic text in any genre you love",
-        },
-        {
-          icon: "🔄",
-          name: "Translate",
-          description: "Translate between one language to another",
-        },
-        {
-          icon: "🔍",
-          name: "Plagiarism Check",
-          description: "Compare analysis with any genre that you love",
-        },
-      ],
-    },
-    {
-      title: "Creative",
-      items: [
-        {
-          icon: "📖",
-          name: "Storyteller",
-          description: "Generate stories from your idea or prompt",
-        },
-        {
-          icon: "🎵",
-          name: "Songs/Lyrics",
-          description: "Generate song ideas with any genre",
-        },
-        {
-          icon: "📜",
-          name: "Poems",
-          description: "Generate poems in different styles",
-        },
-        {
-          icon: "🎬",
-          name: "Movie Script",
-          description: "Generate scripts for making movies",
-        },
-      ],
-    },
-    {
-      title: "Business",
-      items: [
-        {
-          icon: "✉️",
-          name: "Email Writer",
-          description: "Generate template for email writing, etc",
-        },
-        {
-          icon: "📄",
-          name: "Create CV",
-          description: "Create the best CV templates for you",
-        },
-        {
-          icon: "📢",
-          name: "Advertisements",
+          icon: "⚠️",
+          name: "Risk Analysis",
           description:
-            "Generate promotional text for products, services, brands, etc",
+            "Analyze potential risks in your projects and provide mitigation strategies.",
         },
         {
-          icon: "💼",
-          name: "Job Post",
-          description: "Write ideal job descriptions for posting",
-        },
-      ],
-    },
-    {
-      title: "Social Media",
-      items: [
-        {
-          icon: "📸",
-          name: "Instagram",
-          description: "Generate impactful captions to attract audience",
+          icon: "📊",
+          name: "Risk Assessment",
+          description:
+            "Evaluate and assess the risk factors impacting your business.",
         },
         {
-          icon: "💼",
-          name: "LinkedIn",
-          description: "Create powerful post based on your experience",
-        },
-        {
-          icon: "🐦",
-          name: "X",
-          description: "Write ideal job descriptions for posting",
-        },
-        {
-          icon: "🎵",
-          name: "TikTok",
-          description: "Generate captioning and viral captions for TikTok",
-        },
-      ],
-    },
-    {
-      title: "Developer",
-      items: [
-        {
-          icon: "💻",
-          name: "Write Code",
-          description: "Generate beautiful snippets of helpful code",
-        },
-        {
-          icon: "🔍",
-          name: "Explain Code",
-          description: "Decode and see websites variety step by step",
-        },
-      ],
-    },
-    {
-      title: "Other",
-      items: [
-        {
-          icon: "💭",
-          name: "Create Conversation",
-          description: "Create conversation template of two or more people",
-        },
-        {
-          icon: "🍳",
-          name: "Food Recipes",
-          description: "Get any cooking recipes for food and dishes",
+          icon: "🔒",
+          name: "Risk Mitigation",
+          description: "Generate strategies to mitigate identified risks.",
         },
       ],
     },

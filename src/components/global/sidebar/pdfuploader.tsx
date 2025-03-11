@@ -12,7 +12,8 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 
-const PDF_UPLOADER = "http://localhost:8080/upload";
+// Updated to use a function that constructs the URL with query parameters
+const getUploadURL = (projectName) => `http://localhost:8080/upload?projectName=${encodeURIComponent(projectName)}`;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const MultiplePDFUploader = ({ projectName = "default" }) => {
@@ -61,10 +62,10 @@ const MultiplePDFUploader = ({ projectName = "default" }) => {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("projectName", projectName);
+    // Removed projectName from formData as it's now in the URL
 
     try {
-      const response = await axios.post(PDF_UPLOADER, formData, {
+      const response = await axios.post(getUploadURL(projectName), formData, {
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round(
