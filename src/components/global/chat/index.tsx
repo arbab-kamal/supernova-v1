@@ -7,8 +7,9 @@ import WelcomeUser from "./Welcome";
 import { useTheme } from "next-themes";
 import { getThemeColors } from "@/lib/constant";
 import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { selectCurrentProject } from "@/store/projectSlice";
+import { selectChatId, selectResetFlag } from "@/store/chatSlice";
 
 interface Message {
   text: string;
@@ -20,10 +21,13 @@ const Chatbox = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userInitial, setUserInitial] = useState<string>("");
-  const [chatId, setChatId] = useState<number>(1); // Start with 1 to match Long type expectation
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
+  
+  // Use Redux instead of local state for chatId
+  const chatId = useSelector(selectChatId);
+  const resetFlag = useSelector(selectResetFlag);
   const selectedProject = useSelector(selectCurrentProject);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -95,6 +99,11 @@ const Chatbox = () => {
     fetchUserName();
   }, []);
 
+  // Reset messages when resetFlag changes (triggered by the new chat action)
+  useEffect(() => {
+    setMessages([]);
+  }, [resetFlag]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -102,11 +111,6 @@ const Chatbox = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const startNewChat = () => {
-    setMessages([]);
-    setChatId(prev => prev + 1);
-  };
 
   const fetchAIResponse = async (query: string) => {
     setIsLoading(true);

@@ -1,13 +1,15 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, PlusCircle, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useDispatch } from 'react-redux';
+import { startNewChat } from '@/store/chatSlice';
 import {
   MessageCircle,
   Wand2,
@@ -30,6 +32,11 @@ const Sidebar = () => {
   const [username, setUsername] = useState<string | null>(null);
 
   const pathname = usePathname();
+  const dispatch = useDispatch();
+  
+  const handleNewChat = () => {
+    dispatch(startNewChat());
+  };
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -112,12 +119,13 @@ const Sidebar = () => {
       </div>
 
       {/* New Chat Button */}
-      <Link href="/chat">
-        <Button variant="secondary" className="w-full mb-6 text-blue-600">
-          <MessageCircle className="w-4 h-4 mr-2" />
-          Start New Chat
-        </Button>
-      </Link>
+      <button
+        onClick={handleNewChat}
+        className="flex items-center gap-2 w-full p-3 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-800 mb-4"
+      >
+        <PlusCircle className="w-5 h-5" />
+        <span>New Chat</span>
+      </button>
 
       {/* Scrollable Middle Section */}
       <div className="flex-1 overflow-hidden space-y-6 ">
