@@ -14,42 +14,60 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 
-// Create a URL base without hardcoding the project name
 const BASE_UPLOAD_URL = "http://localhost:8080/upload";
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName }) => {
   // Get the selected project from Redux store
   const selectedProject = useSelector(selectCurrentProject);
+  const router = useRouter();
   
-  // More reliable projectName determination
-  const determineProjectName = useCallback(() => {
-    // Start with default value
-    let resolvedProjectName = "default";
+  // Simplified project name resolution
+  const getProjectName = useCallback(() => {
+    // First priority: Use prop if it exists and is valid
+    if (propProjectName && typeof propProjectName === "string" && propProjectName.trim() !== "") {
+      console.log("Using project name from props:", propProjectName);
+      return propProjectName.trim();
+    }
     
-    // Use prop if provided and it's a non-empty string
-    if (typeof propProjectName === "string" && propProjectName) {
-      resolvedProjectName = propProjectName;
-    } else if (selectedProject) {
-      if (typeof selectedProject === "string") {
-        // If selectedProject is a string, use it directly
-        resolvedProjectName = selectedProject;
-      } else if (typeof selectedProject === "object" && selectedProject.name) {
-        // If selectedProject is an object with a name property, use that
-        resolvedProjectName = selectedProject.name;
+    // Second priority: Check selectedProject
+    if (selectedProject) {
+      // If selectedProject is a string
+      if (typeof selectedProject === "string" && selectedProject.trim() !== "") {
+        console.log("Using project name from Redux (string):", selectedProject);
+        return selectedProject.trim();
+      }
+      
+      // If selectedProject is an object with name property
+      if (
+        typeof selectedProject === "object" && 
+        selectedProject !== null &&
+        selectedProject.name && 
+        typeof selectedProject.name === "string" && 
+        selectedProject.name.trim() !== ""
+      ) {
+        console.log("Using project name from Redux (object):", selectedProject.name);
+        return selectedProject.name.trim();
+      }
+      
+      // If selectedProject has an id property
+      if (
+        typeof selectedProject === "object" && 
+        selectedProject !== null &&
+        selectedProject.id && 
+        typeof selectedProject.id === "string" && 
+        selectedProject.id.trim() !== ""
+      ) {
+        console.log("Using project ID from Redux as name:", selectedProject.id);
+        return selectedProject.id.trim();
       }
     }
     
-    // Add a validation check to ensure projectName is a string
-    if (typeof resolvedProjectName !== "string" || !resolvedProjectName) {
-      resolvedProjectName = "default";
-    }
-    
-    return resolvedProjectName;
+    // Last resort: Use default and log the issue
+    console.warn("Failed to determine project name, using default. Props:", propProjectName, "Redux state:", selectedProject);
+    return "default";
   }, [propProjectName, selectedProject]);
 
-  const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -89,12 +107,13 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
     formData.append("file", file);
 
     try {
-      // Get the current project name each time we upload
-      const currentProjectName = determineProjectName();
-      const uploadURL = `${BASE_UPLOAD_URL}?projectName=${encodeURIComponent(currentProjectName)}`;
+      // Get project name for this upload
+      const projectName = getProjectName();
       
-      console.log(`Uploading to: ${uploadURL}`);
-      console.log(`Project name: ${currentProjectName}`);
+      // Debug information
+      console.log(`Uploading to project: "${projectName}"`);
+      
+      const uploadURL = `${BASE_UPLOAD_URL}?projectName=${encodeURIComponent(projectName)}`;
       
       const response = await axios.post(uploadURL, formData, {
         onUploadProgress: (progressEvent) => {
@@ -120,7 +139,7 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
               : item
           )
         );
-        toast.success(`${file.name} uploaded successfully`);
+        toast.success(`${file.name} uploaded successfully to project "${projectName}"`);
 
         // Call the onUploadComplete callback if provided
         if (typeof onUploadComplete === "function") {
@@ -133,7 +152,7 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
         }, 2000);
       }
     } catch (error) {
-      console.error("Full upload error:", error);
+      console.error("Upload error:", error);
       
       const errorMessage = error.response 
         ? `Server error: ${error.response.status} ${error.response.statusText || ''} - ${error.response.data || ''}`
@@ -153,7 +172,7 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
       );
       toast.error(`Failed to upload ${file.name}: ${errorMessage}`);
     }
-  }, [router, onUploadComplete, determineProjectName]);
+  }, [router, onUploadComplete, getProjectName]);
 
   const handleFiles = useCallback(
     (files) => {
@@ -234,7 +253,7 @@ const MultiplePDFUploader = ({ onUploadComplete, projectName: propProjectName })
         <DialogTrigger asChild>
           <Button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center space-x-2">
             <Upload className="w-4 h-4" />
-            <span>Upload PDFs</span>
+            <span>Upload PDFs to {getProjectName()}</span>
           </Button>
         </DialogTrigger>
 
