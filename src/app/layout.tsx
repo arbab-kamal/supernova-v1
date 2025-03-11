@@ -1,13 +1,15 @@
+// RootLayout.tsx
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/providers/theme-provider";
+// import { ThemeProvider } from "@/providers/theme-provider";
+import Providers from "@/providers/reduxprovider"; // Adjust the import path accordingly
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"], // Select needed weights
-  variable: "--font-poppins", // Optional: for CSS variables
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -22,16 +24,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.variable} ${poppins.variable} antialiased`}>
-        {/* <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        > */}
-        {children}
-        <Toaster />
-        {/* </ThemeProvider> */}
+      <body className={`${poppins.variable} antialiased`}>
+        <Providers>
+          {/* <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          > */}
+          {children}
+          <Toaster />
+          {/* </ThemeProvider> */}
+        </Providers>
       </body>
     </html>
   );

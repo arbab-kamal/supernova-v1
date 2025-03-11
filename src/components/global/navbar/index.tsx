@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getThemeColors } from "@/lib/constant";
+import { useSelector } from "react-redux";
+import { selectCurrentProject } from "@/store/projectSlice";
 
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ const ArticleNavbar = () => {
   const { setTheme, theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
+  const currentProject = useSelector(selectCurrentProject);
 
   return (
     <div className="relative">
@@ -86,7 +89,29 @@ const ArticleNavbar = () => {
 
         {/* Right Side */}
         <div className="flex items-center space-x-3">
-          <BookmarkModal />
+          {/* Current Project Display - now part of the right side, before bookmark */}
+          {currentProject && (
+            <div className="flex items-center mr-2 border-r pr-3" style={{ borderColor: colors.border }}>
+              <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center text-blue-600 mr-2">
+                {currentProject.title.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="font-medium" style={{ color: colors.text.primary }}>
+                  {currentProject.title}
+                </h3>
+                <p className="text-xs" style={{ color: colors.text.secondary }}>
+                  Project
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <BookmarkModal 
+            projectInfo={currentProject ? {
+              id: currentProject.id,
+              title: currentProject.title
+            } : null}
+          />
           <ProjectModal />
 
           {/* Theme Selector */}

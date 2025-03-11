@@ -1,19 +1,21 @@
 "use client";
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Zap, ArrowLeft, Save } from "lucide-react";
-import { useRouter } from "next/navigation"; // Import the router
+import { MessageSquare, Zap } from "lucide-react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import ProjectModal from "./modal";
+import { useDispatch } from "react-redux";
+import { setProjects, setSelectedProject } from "@/store/projectSlice";
 
 const ProjectDashboard = () => {
-  const router = useRouter(); // Initialize the router
+  const router = useRouter();
+  const dispatch = useDispatch();
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-  const [projects, setProjects] = React.useState([]);
+  const [localProjects, setLocalProjects] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
-  // Fetch projects from API on component mount
   useEffect(() => {
     fetchProjects();
   }, []);
@@ -23,11 +25,9 @@ const ProjectDashboard = () => {
       setLoading(true);
       const response = await axios.get("http://localhost:8080/getProjects");
       
-      // Transform the string list into objects your component can use
       const formattedProjects = response.data.map((projectTitle, index) => ({
         id: String(index + 1),
         title: projectTitle,
-        // Default values for other properties used in your UI
         image: "/book.jpg",
         admin: "Admin",
         adminAvatar: "/1.jpeg",
@@ -35,7 +35,9 @@ const ProjectDashboard = () => {
         promptCount: 0
       }));
       
-      setProjects(formattedProjects);
+      setLocalProjects(formattedProjects);
+      // Also update Redux store
+      dispatch(setProjects(formattedProjects));
       setLoading(false);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -45,26 +47,23 @@ const ProjectDashboard = () => {
   };
 
   const handleProjectClick = (project) => {
-    // Navigate to the chat page with the project ID as a query parameter
+    // Store the selected project in Redux
+    dispatch(setSelectedProject(project));
+    // Navigate to the chat page
     router.push(`/chat?projectId=${project.id}&projectTitle=${encodeURIComponent(project.title)}`);
   };
 
   const handleCreateProject = async (newProject) => {
     try {
-      // Make POST request to create project API
       const response = await axios.post("http://localhost:8080/createProject", {
         projectTitle: newProject.title
       });
       
-      // Refresh the projects list after creating a new one
       fetchProjects();
-      
-      // Show success toast
       toast.success("Project created successfully!");
       setIsCreateOpen(false);
     } catch (error) {
       console.error("Error creating project:", error);
-      // Show error toast
       toast.error("Failed to create project. Please try again.");
     }
   };
@@ -85,13 +84,13 @@ const ProjectDashboard = () => {
 
       {loading ? (
         <div className="text-center py-12">Loading projects...</div>
-      ) : projects.length === 0 ? (
+      ) : localProjects.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           No projects found. Create your first project to get started.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {localProjects.map((project) => (
             <div
               key={project.id}
               className="bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
@@ -146,7 +145,6 @@ const ProjectDashboard = () => {
         </div>
       )}
       
-      {/* Add the modal for creating new projects */}
       <ProjectModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
