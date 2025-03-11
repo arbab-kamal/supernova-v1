@@ -84,18 +84,46 @@ const Chatbox = () => {
   useEffect(() => {
     const fetchUserName = async () => {
       try {
-        const res = await fetch("http://localhost:8080/userName");
-        if (!res.ok) throw new Error("Failed to fetch username");
-
-        const data = await res.json();
-        if (data.name) {
-          setUserInitial(data.name.charAt(0).toUpperCase());
+        const response = await axios.get("http://localhost:8080/userName", {
+          withCredentials: true,
+        });
+        
+        let name = "";
+        
+        // Handle different response formats
+        if (typeof response.data === "string") {
+          name = response.data.trim();
+        } else if (typeof response.data === "object" && response.data !== null) {
+          if ("username" in response.data) {
+            name = response.data.username;
+          } else if ("name" in response.data) {
+            name = response.data.name;
+          } else {
+            // Try to get the first value in the object
+            const firstValue = Object.values(response.data)[0];
+            if (typeof firstValue === "string") {
+              name = firstValue;
+            } else {
+              throw new Error("Invalid data format");
+            }
+          }
+        } else {
+          throw new Error("Invalid data format");
         }
+        
+        // Extract just the first letter and capitalize it
+        if (name && name.length > 0) {
+          setUserInitial(name.charAt(0).toUpperCase());
+        } else {
+          setUserInitial("U"); // Fallback if name is empty
+        }
+        
       } catch (error) {
         console.error("Error fetching user name:", error);
+        setUserInitial("U"); // Fallback if error occurs
       }
     };
-
+  
     fetchUserName();
   }, []);
 

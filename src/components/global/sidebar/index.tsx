@@ -8,8 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDispatch } from 'react-redux';
-import { startNewChat } from '@/store/chatSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { startNewChat, selectChatId } from '@/store/chatSlice';
+import { selectCurrentProject } from '@/store/projectSlice';
 import {
   MessageCircle,
   Wand2,
@@ -30,12 +31,40 @@ const Sidebar = () => {
   const [isPromptOpen, setIsPromptOpen] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const pathname = usePathname();
   const dispatch = useDispatch();
+  const chatId = useSelector(selectChatId);
+  const selectedProject = useSelector(selectCurrentProject);
   
   const handleNewChat = () => {
     dispatch(startNewChat());
+  };
+  
+  // Function to get project name - robust method
+  const getProjectName = () => {
+    if (typeof selectedProject === "string" && selectedProject.trim() !== "") {
+      return selectedProject.trim();
+    }
+    
+    if (
+      typeof selectedProject === "object" && 
+      selectedProject !== null
+    ) {
+      if (selectedProject.name && typeof selectedProject.name === "string") {
+        return selectedProject.name.trim();
+      }
+      if (selectedProject.title && typeof selectedProject.title === "string") {
+        return selectedProject.title.trim();
+      }
+      if (selectedProject.projectTitle && typeof selectedProject.projectTitle === "string") {
+        return selectedProject.projectTitle.trim();
+      }
+    }
+    
+    return "default";
   };
 
   useEffect(() => {
@@ -71,6 +100,44 @@ const Sidebar = () => {
 
     fetchUsername();
   }, []);
+  
+  // Fetch chat history
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      if (!chatId) return;
+      
+      setHistoryLoading(true);
+      try {
+        const projectName = getProjectName();
+        const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+        
+        const response = await axios.get(`${baseURL}/chatHistory`, {
+          params: {
+            chatId,
+            projectName
+          },
+          withCredentials: true
+        });
+        
+        // Set chat history from response
+        if (Array.isArray(response.data)) {
+          setChatHistory(response.data);
+        } else {
+          console.error("Unexpected response format:", response.data);
+          setChatHistory([]);
+        }
+      } catch (err) {
+        console.error("Error fetching chat history:", err);
+        setChatHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    if (isHistoryOpen) {
+      fetchChatHistory();
+    }
+  }, [chatId, selectedProject, isHistoryOpen]);
 
   const handleLogout = async () => {
     try {
@@ -98,15 +165,19 @@ const Sidebar = () => {
       label: "Project",
       href: "/project",
     },
-    // { id: "shared", icon: Share2, label: "Shared", href: "/chat/shared" },
     {
       id: "bookmark",
       icon: Bookmark,
       label: "Bookmark",
       href: "/chat/bookmark",
     },
-    // { id: "archive", icon: Archive, label: "Archive", href: "/chat/archive" },
   ];
+
+  // Function to truncate text for display
+  const truncateText = (text, maxLength = 25) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
 
   return (
     <div className="w-64 h-screen bg-gradient-to-b from-blue-600 to-blue-400 p-4 text-white flex flex-col">
@@ -121,17 +192,17 @@ const Sidebar = () => {
       {/* New Chat Button */}
       <button
         onClick={handleNewChat}
-        className="flex items-center gap-2 w-full p-3 rounded-lg hover:bg-white/10 text-left  mb-4"
+        className="flex items-center gap-2 w-full p-3 rounded-lg hover:bg-white/10 text-left mb-4"
       >
         <PlusCircle className="w-5 h-5" />
         <span>New Chat</span>
       </button>
 
       {/* Scrollable Middle Section */}
-      <div className="flex-1 overflow-hidden space-y-6 ">
+      <div className="flex-1 overflow-y-auto space-y-6">
         {/* Prompt Assist Section */}
         <div>
-          <button className="flex items-center justify-between w-full mb-2 hover:bg-white/10 p-2 rounded-md ">
+          <button className="flex items-center justify-between w-full mb-2 hover:bg-white/10 p-2 rounded-md">
             <div className="flex items-center gap-2">
               <Wand2 className="w-4 h-4" />
               <span className="font-medium">Prompt Assist</span>
@@ -151,11 +222,11 @@ const Sidebar = () => {
 
           {isPromptOpen && (
             <>
-              <div className="text-xs text-white/70 mb-2 uppercase ml-6 ">
+              <div className="text-xs text-white/70 mb-2 uppercase ml-6">
                 SUGGESTION
               </div>
               <div className="space-y-2">
-                <div className="ml-6 hover:bg-white/10 rounded-md p-2 cursor-pointer ">
+                <div className="ml-6 hover:bg-white/10 rounded-md p-2 cursor-pointer">
                   <div className="font-medium">Risk</div>
                   <div className="text-sm text-white/70">
                     Analyzed Your BRD Technological Risk
@@ -199,6 +270,27 @@ const Sidebar = () => {
               />
             )}
           </button>
+
+          {isHistoryOpen && (
+            <>
+              <div className="ml-6 space-y-2 max-h-48 overflow-y-auto pr-2">
+                {historyLoading ? (
+                  <div className="text-center py-2">
+                    <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                  </div>
+                ) : chatHistory.length === 0 ? (
+                  <div className="text-xs text-white/70 italic py-2">No chat history</div>
+                ) : (
+                  chatHistory.map((item, index) => (
+                    <div key={index} className="hover:bg-white/10 rounded-md p-2 cursor-pointer text-sm">
+                      <div className="font-medium">{truncateText(item.question || "Conversation")}</div>
+                      <div className="text-xs text-white/70">{truncateText(item.reply, 35)}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -232,7 +324,7 @@ const Sidebar = () => {
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 p-2 hover:bg-white/10 rounded-lg cursor-pointer w-full">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <MessageCircle className="w-4 h-4 text-white" />
+              <User className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 text-left">
               <div className="text-sm font-medium">{username || "Loading..."}</div>
