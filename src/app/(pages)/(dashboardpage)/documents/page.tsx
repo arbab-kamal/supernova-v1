@@ -57,10 +57,12 @@ const DocumentListPage = () => {
       setLoading(true);
       setError(null);
       
+      // If selectedProject is an object with a name property
+      const projectName = selectedProject?.name || selectedProject;
       const response = await axios.get(
-        `http://localhost:8080/getDocuments?projectName=${selectedProject}`, 
+          `http://localhost:8080/getDocuments?projectName=${projectName}`, 
         { withCredentials: true }
-      );
+    );
       
       // Assuming the response data structure matches what we need
       const fileNames = response.data;
