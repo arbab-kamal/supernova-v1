@@ -44,7 +44,18 @@ const DocumentListPage = () => {
   >([]);
   
   // Get the selected project from Redux store
-  const selectedProject = useSelector(selectCurrentProject);
+  const selectedProjectObj = useSelector(selectCurrentProject);
+  
+  // Extract the project name from the object
+  const getProjectName = (projectObj) => {
+    if (!projectObj) return null;
+    if (typeof projectObj === 'string') return projectObj;
+    // Try to extract the name from common property names
+    return projectObj.name || projectObj.title || projectObj.projectName || 
+           projectObj.projectTitle || projectObj.id || "unknown";
+  };
+  
+  const selectedProject = getProjectName(selectedProjectObj);
 
   // Fetch files from backend using axios
   const fetchFiles = async () => {
@@ -57,12 +68,10 @@ const DocumentListPage = () => {
       setLoading(true);
       setError(null);
       
-      // If selectedProject is an object with a name property
-      const projectName = selectedProject?.name || selectedProject;
       const response = await axios.get(
-          `http://localhost:8080/getDocuments?projectName=${projectName}`, 
+        `http://localhost:8080/getDocuments?projectName=${selectedProject}`, 
         { withCredentials: true }
-    );
+      );
       
       // Assuming the response data structure matches what we need
       const fileNames = response.data;
