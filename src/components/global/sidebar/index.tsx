@@ -46,6 +46,8 @@ const Sidebar = () => {
   const handleNewChat = () => {
     dispatch(startNewChat());
     router.push('/chat');
+    // We'll refetch chat counts after creating a new chat
+    // The actual fetch will happen in the useEffect when chatId changes
   };
   
   // Function to get project name - robust method
@@ -106,39 +108,47 @@ const Sidebar = () => {
     fetchUsername();
   }, []);
 
-  // Fetch chat count
-  useEffect(() => {
-    const fetchChatCount = async () => {
-      if (!selectedProject) return;
+  // Function to fetch chat counts
+  const fetchChatCount = async () => {
+    if (!selectedProject) return;
+    
+    setIsLoading(true);
+    try {
+      const projectName = getProjectName();
+      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
       
-      setIsLoading(true);
-      try {
-        const projectName = getProjectName();
-        const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        
-        const response = await axios.get(`${baseURL}/chatCount`, {
-          params: {
-            projectName
-          },
-          withCredentials: true
-        });
-        
-        // Store the counts
-        if (Array.isArray(response.data)) {
-          setChatCountList(response.data.map(count => Number(count) || 0));
-        } else {
-          setChatCountList([]);
-        }
-      } catch (err) {
-        console.error("Error fetching chat count:", err);
+      const response = await axios.get(`${baseURL}/chatCount`, {
+        params: {
+          projectName
+        },
+        withCredentials: true
+      });
+      
+      // Store the counts
+      if (Array.isArray(response.data)) {
+        setChatCountList(response.data.map(count => Number(count) || 0));
+      } else {
         setChatCountList([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching chat count:", err);
+      setChatCountList([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Fetch chat count on initial load and when project changes
+  useEffect(() => {
     fetchChatCount();
   }, [selectedProject]);
+  
+  // Refetch chat count when chatId changes (new chat created)
+  useEffect(() => {
+    if (chatId) {
+      fetchChatCount();
+    }
+  }, [chatId]);
 
   const handleLogout = async () => {
     try {
@@ -180,9 +190,6 @@ const Sidebar = () => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  // Get current project name for display
-  const currentProjectName = getProjectName();
-
   return (
     <div className="w-64 h-screen bg-gradient-to-b from-blue-600 to-blue-400 p-4 text-white flex flex-col">
       {/* Header */}
@@ -191,17 +198,6 @@ const Sidebar = () => {
           <MessageCircle className="w-5 h-5 text-blue-600" />
         </div>
         <h1 className="text-xl font-semibold">SuperNova</h1>
-      </div>
-
-      {/* Project Info */}
-      <div className="bg-white/10 rounded-lg p-3 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderGit2 className="w-4 h-4" />
-            <span className="font-medium text-sm">Project:</span>
-          </div>
-          <span className="text-sm font-bold">{truncateText(currentProjectName)}</span>
-        </div>
       </div>
 
       {/* New Chat Button */}
@@ -267,7 +263,7 @@ const Sidebar = () => {
           >
             <div className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
-              <span className="font-medium">Chat Count</span>
+              <span className="font-medium">Chat</span>
             </div>
             {isChatCountOpen ? (
               <ChevronDown
@@ -290,7 +286,7 @@ const Sidebar = () => {
                     <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
                   </div>
                 ) : chatCountList.length === 0 ? (
-                  <div className="text-xs text-white/70 italic py-2">No chat count data available</div>
+                  <div className="text-xs text-white/70 italic py-2">No chat data available</div>
                 ) : (
                   chatCountList.map((count, index) => (
                     <button
@@ -299,7 +295,7 @@ const Sidebar = () => {
                     >
                       <div className="flex items-center gap-2">
                         <MessageSquare className="w-4 h-4" />
-                        <span className="font-medium">User {index + 1}</span>
+                        <span className="font-medium">Chat {index + 1}</span>
                       </div>
                       <div className="bg-blue-500 px-2 py-1 rounded-full text-xs font-bold">
                         {count}
