@@ -8,17 +8,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDispatch, useSelector } from 'react-redux';
-import { startNewChat, selectChatId,selectChatStatus } from '@/store/chatSlice';
-import { selectCurrentProject } from '@/store/projectSlice';
+import { useDispatch, useSelector } from "react-redux";
+import { startNewChat, selectChatId, selectChatStatus } from "@/store/chatSlice";
+import { selectCurrentProject } from "@/store/projectSlice";
 
 import {
   MessageCircle,
   Wand2,
   Clock,
-  Share2,
   Bookmark,
-  Archive,
   ChevronDown,
   ChevronUp,
   FolderGit2,
@@ -31,12 +29,18 @@ import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 
 const Sidebar = () => {
+  // Local state for toggling sections, username and loading indicator
   const [isPromptOpen, setIsPromptOpen] = useState(true);
   const [isChatCountOpen, setIsChatCountOpen] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
-  const [chatCountList, setChatCountList] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [localChatId, setLocalChatId] = useState<string | null>(null);
+
+  // chatCountList keeps a count for each chat (each element is the number of messages)
+  const [chatCountList, setChatCountList] = useState<number[]>([]);
+  // currentChatId will hold the latest chat id, which we increment every time a new chat is created.
+  const [currentChatId, setCurrentChatId] = useState(0);
+  // activeChatIndex holds the index of the chat that is currently active.
+  const [activeChatIndex, setActiveChatIndex] = useState<number | null>(null);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -44,39 +48,33 @@ const Sidebar = () => {
   const chatId = useSelector(selectChatId);
   const chatStatus = useSelector(selectChatStatus);
   const selectedProject = useSelector(selectCurrentProject);
-  
-  // Handle new chat creation with immediate count increment
+
+  // Create a new chat with an incremented chat id.
   const handleNewChat = async () => {
-    // Get the current highest chat index
-    const highestIndex = chatCountList.length;
-    const newChatIndex = highestIndex;
-    
-    // Create a new chat in Redux
-    dispatch(startNewChat());
-    
-    // Update local state immediately to show the new chat in the sidebar
-    const newChatList = [...chatCountList];
-    // Add a new chat with count 0 (will be incremented as messages are added)
-    newChatList[newChatIndex] = 0;
-    setChatCountList(newChatList);
-    
-    // Store the current chat ID locally to track changes
-    setLocalChatId(Date.now().toString());
-    
+    // Increment the currentChatId by one
+    const newChatId = currentChatId + 1;
+    setCurrentChatId(newChatId);
+
+    // Dispatch the new chat action with the newChatId (adjust your Redux slice if needed)
+    dispatch(startNewChat(newChatId));
+
+    // Append a new chat to the count list (starting at 0 messages)
+    const updatedChatCountList = [...chatCountList, 0];
+    setChatCountList(updatedChatCountList);
+
+    // Mark the new chat as the active one by saving its index (last in array)
+    setActiveChatIndex(updatedChatCountList.length - 1);
+
     // Navigate to the chat page
     router.push('/chat');
   };
-  
-  // Function to get project name - robust method
+
+  // A robust method to retrieve the project name from the selected project
   const getProjectName = () => {
     if (typeof selectedProject === "string" && selectedProject.trim() !== "") {
       return selectedProject.trim();
     }
-    
-    if (
-      typeof selectedProject === "object" && 
-      selectedProject !== null
-    ) {
+    if (typeof selectedProject === "object" && selectedProject !== null) {
       if (selectedProject.name && typeof selectedProject.name === "string") {
         return selectedProject.name.trim();
       }
@@ -87,25 +85,22 @@ const Sidebar = () => {
         return selectedProject.projectTitle.trim();
       }
     }
-    
     return "default";
   };
 
+  // Fetch username on mount
   useEffect(() => {
     const fetchUsername = async () => {
       try {
         const response = await axios.get("http://localhost:8080/userName", {
           withCredentials: true,
         });
-
-        // Handle different response formats
         if (typeof response.data === "string") {
           setUsername(response.data.trim());
         } else if (typeof response.data === "object" && response.data !== null) {
           if ("username" in response.data) {
             setUsername(response.data.username);
           } else {
-            // Try to get the first value in the object
             const firstValue = Object.values(response.data)[0];
             if (typeof firstValue === "string") {
               setUsername(firstValue);
@@ -118,31 +113,24 @@ const Sidebar = () => {
         }
       } catch (error) {
         console.error("Error fetching username:", error);
-        setUsername("Unknown User"); // Fallback if error occurs
+        setUsername("Unknown User");
       }
     };
-
     fetchUsername();
   }, []);
 
-  // Initial chat count fetch
+  // Initial chat count fetch when the project is selected
   useEffect(() => {
     const fetchChatCount = async () => {
       if (!selectedProject) return;
-      
       setIsLoading(true);
       try {
         const projectName = getProjectName();
         const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        
         const response = await axios.get(`${baseURL}/chatCount`, {
-          params: {
-            projectName
-          },
-          withCredentials: true
+          params: { projectName },
+          withCredentials: true,
         });
-        
-        // Store the counts
         if (Array.isArray(response.data)) {
           setChatCountList(response.data.map(count => Number(count) || 0));
         } else {
@@ -155,45 +143,33 @@ const Sidebar = () => {
         setIsLoading(false);
       }
     };
-
     fetchChatCount();
   }, [selectedProject]);
-  
-  // Effect to update chat count when a message is sent
+
+  // When a message is sent and chat status becomes completed, increment the count for the active chat.
   useEffect(() => {
-    // If we have a chat ID and the status is completed, increment count for the current chat
-    if (chatId && chatStatus === 'completed' && localChatId === chatId) {
-      const currentChatIndex = chatCountList.length - 1;
-      if (currentChatIndex >= 0) {
-        const updatedCounts = [...chatCountList];
-        updatedCounts[currentChatIndex] = (updatedCounts[currentChatIndex] || 0) + 1;
-        setChatCountList(updatedCounts);
-      }
+    if (chatStatus === 'completed' && activeChatIndex !== null) {
+      const updatedCounts = [...chatCountList];
+      updatedCounts[activeChatIndex] = (updatedCounts[activeChatIndex] || 0) + 1;
+      setChatCountList(updatedCounts);
     }
-  }, [chatStatus, chatId, localChatId]);
-  
-  // Effect to sync with backend periodically
+  }, [chatStatus]);
+
+  // Sync with backend periodically (every 5 seconds)
   useEffect(() => {
     const syncWithBackend = async () => {
       if (!selectedProject) return;
-      
       try {
         const projectName = getProjectName();
         const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        
         const response = await axios.get(`${baseURL}/chatCount`, {
-          params: {
-            projectName
-          },
-          withCredentials: true
+          params: { projectName },
+          withCredentials: true,
         });
-        
-        // Update counts from backend, but preserve our local state for active chat
         if (Array.isArray(response.data)) {
           const backendCounts = response.data.map(count => Number(count) || 0);
-          
-          // If we have a new chat that's not yet in the backend, preserve it
-          if (chatId && localChatId === chatId && backendCounts.length < chatCountList.length) {
+          // If the new chat is not yet in the backend, keep its current count locally
+          if (activeChatIndex !== null && backendCounts.length < chatCountList.length) {
             const mergedCounts = [...backendCounts];
             mergedCounts[chatCountList.length - 1] = chatCountList[chatCountList.length - 1];
             setChatCountList(mergedCounts);
@@ -205,19 +181,16 @@ const Sidebar = () => {
         console.error("Error syncing with backend:", err);
       }
     };
-
-    // Sync with backend every 5 seconds
     const intervalId = setInterval(syncWithBackend, 5000);
-    
     return () => clearInterval(intervalId);
-  }, [selectedProject, chatId, localChatId]);
+  }, [selectedProject, activeChatIndex, chatCountList]);
 
+  // Logout handler
   const handleLogout = async () => {
     try {
       const response = await axios.get("http://localhost:8080/logout", {
         withCredentials: true,
       });
-
       if (response.status === 200) {
         localStorage.clear();
         sessionStorage.clear();
@@ -246,27 +219,23 @@ const Sidebar = () => {
     },
   ];
 
-  // Function to truncate text for display
-  const truncateText = (text, maxLength = 25) => {
+  // For truncating long text (if needed)
+  const truncateText = (text: string, maxLength = 25) => {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  // Manual refresh button handler
+  // Manual refresh for chat counts
   const handleManualRefresh = () => {
     const fetchChatCount = async () => {
       setIsLoading(true);
       try {
         const projectName = getProjectName();
         const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        
         const response = await axios.get(`${baseURL}/chatCount`, {
-          params: {
-            projectName
-          },
-          withCredentials: true
+          params: { projectName },
+          withCredentials: true,
         });
-        
         if (Array.isArray(response.data)) {
           setChatCountList(response.data.map(count => Number(count) || 0));
         } else {
@@ -278,7 +247,6 @@ const Sidebar = () => {
         setIsLoading(false);
       }
     };
-    
     fetchChatCount();
   };
 
@@ -301,7 +269,7 @@ const Sidebar = () => {
         <span>New Chat</span>
       </button>
 
-      {/* Scrollable Middle Section */}
+      {/* Middle Section */}
       <div className="flex-1 overflow-y-auto space-y-6">
         {/* Prompt Assist Section */}
         <div>
@@ -322,7 +290,6 @@ const Sidebar = () => {
               />
             )}
           </button>
-
           {isPromptOpen && (
             <>
               <div className="text-xs text-white/70 mb-2 uppercase ml-6">
@@ -350,15 +317,12 @@ const Sidebar = () => {
 
         {/* Chat Count Section */}
         <div>
-          <button
-            className={`flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10`}
-          >
+          <button className="flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10">
             <div className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
               <span className="font-medium">Chat Count</span>
             </div>
             <div className="flex items-center gap-1">
-              {/* Refresh button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -382,36 +346,33 @@ const Sidebar = () => {
               )}
             </div>
           </button>
-
           {isChatCountOpen && (
-            <>
-              <div className="ml-6 space-y-2 pr-2">
-                {isLoading ? (
-                  <div className="text-center py-2">
-                    <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
-                  </div>
-                ) : chatCountList.length === 0 ? (
-                  <div className="text-xs text-white/70 italic py-2">No chat data available</div>
-                ) : (
-                  chatCountList.map((count, index) => (
-                    <button
-                      key={index}
-                      className={`flex items-center justify-between w-full bg-white/10 hover:bg-white/20 rounded-md p-2 mb-2 transition-colors ${
-                        index === chatCountList.length - 1 && chatId && localChatId === chatId ? 'ring-2 ring-white/40' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4" />
-                        <span className="font-medium">Chat {index + 1}</span>
-                      </div>
-                      <div className="bg-blue-500 px-2 py-1 rounded-full text-xs font-bold">
-                        {count}
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </>
+            <div className="ml-6 space-y-2 pr-2">
+              {isLoading ? (
+                <div className="text-center py-2">
+                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                </div>
+              ) : chatCountList.length === 0 ? (
+                <div className="text-xs text-white/70 italic py-2">No chat data available</div>
+              ) : (
+                chatCountList.map((count, index) => (
+                  <button
+                    key={index}
+                    className={`flex items-center justify-between w-full bg-white/10 hover:bg-white/20 rounded-md p-2 mb-2 transition-colors ${
+                      activeChatIndex === index ? 'ring-2 ring-white/40' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      <span className="font-medium">Chat {index + 1}</span>
+                    </div>
+                    <div className="bg-blue-500 px-2 py-1 rounded-full text-xs font-bold">
+                      {count}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -428,9 +389,7 @@ const Sidebar = () => {
               <Button
                 variant="ghost"
                 className={`w-full justify-start text-white hover:text-white ${
-                  isActive
-                    ? "bg-white/20 hover:bg-white/25"
-                    : "hover:bg-white/10"
+                  isActive ? "bg-white/20 hover:bg-white/25" : "hover:bg-white/10"
                 }`}
               >
                 <Icon className="w-4 h-4 mr-2 text-white" />
@@ -439,10 +398,7 @@ const Sidebar = () => {
             </Link>
           );
         })}
-
         <Separator className="my-2 bg-white/20" />
-
-        {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 p-2 hover:bg-white/10 rounded-lg cursor-pointer w-full">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -454,7 +410,6 @@ const Sidebar = () => {
             </div>
             <ChevronDown className="w-4 h-4 text-white" />
           </DropdownMenuTrigger>
-
           <DropdownMenuContent className="w-48 bg-white text-gray-800 rounded-lg shadow-md mt-2">
             <DropdownMenuItem>
               <Link href="/chat/account" className="flex items-center gap-2">
