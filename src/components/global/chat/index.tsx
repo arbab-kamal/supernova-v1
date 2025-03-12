@@ -13,7 +13,8 @@ import { selectChatId, selectResetFlag } from "@/store/chatSlice";
 import { 
   selectConversationMessages, 
   selectConversationLoading,
-  clearConversation 
+  clearConversation,
+  fetchConversationById 
 } from "@/store/historySlice";
 
 interface Message {
@@ -141,12 +142,34 @@ const Chatbox = () => {
     dispatch(clearConversation());
   }, [resetFlag, dispatch]);
 
-  // Load conversation messages if available
+  // Enhanced debugging of state changes
   useEffect(() => {
-    if (conversationMessages && conversationMessages.length > 0) {
-      setMessages(conversationMessages);
+    console.log("Current state:", {
+      chatId,
+      conversationMessages: conversationMessages?.length || 0,
+      conversationLoading,
+      messages: messages?.length || 0
+    });
+  }, [chatId, conversationMessages, conversationLoading, messages]);
+
+  // Load conversation when chatId changes or when conversation messages are loaded
+  useEffect(() => {
+    if (chatId && !conversationLoading) {
+      // If we have a chat ID but no messages, fetch the conversation
+      if (conversationMessages.length === 0 && !conversationLoading) {
+        console.log(`Fetching conversation for chatId ${chatId}`);
+        dispatch(fetchConversationById({ 
+          conversationId: chatId, 
+          projectName: getProjectName() 
+        }));
+      }
+      // If we have messages, update the UI
+      else if (conversationMessages.length > 0) {
+        console.log(`Setting ${conversationMessages.length} messages from conversation`);
+        setMessages(conversationMessages);
+      }
     }
-  }, [conversationMessages]);
+  }, [chatId, conversationMessages, conversationLoading, dispatch, getProjectName]);
 
   // Clean up conversation data when component unmounts
   useEffect(() => {
@@ -300,7 +323,7 @@ const Chatbox = () => {
                       : '#FFFFFF' 
                   }}
                 >
-                  {message.sender === "ai" && index === messages.length - 1 && !conversationMessages.length ? (
+                  {message.sender === "ai" && index === messages.length - 1 && !chatId ? (
                     <Typewriter text={message.text} speed={20} />
                   ) : (
                     message.text
