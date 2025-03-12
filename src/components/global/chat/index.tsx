@@ -92,6 +92,15 @@ const Chatbox = () => {
     return "default";
   }, [selectedProject]);
 
+  // Immediately detect first-time users when component mounts
+  useEffect(() => {
+    // If no chatId, this is a new user, so skip the first load spinner
+    if (!chatId) {
+      console.log("No chatId - first time user detected");
+      setIsFirstLoad(false);
+    }
+  }, [chatId]);
+
   useEffect(() => {
     const fetchUserName = async () => {
       try {
@@ -148,32 +157,35 @@ const Chatbox = () => {
   useEffect(() => {
     console.log("Current state:", {
       chatId,
-      chatHistory: chatHistory?.length || 0,
+      isFirstLoad,
       historyLoading,
-      messages: messages?.length || 0
+      chatHistory: chatHistory?.length || 0,
+      messages: messages?.length || 0,
+      conversationMessages: conversationMessages?.length || 0
     });
-  }, [chatId, chatHistory, historyLoading, messages]);
+  }, [chatId, isFirstLoad, historyLoading, chatHistory, messages, conversationMessages]);
 
   // Load chat history when chatId changes or when history is loaded
-  // If we have history, update the UI
   useEffect(() => {
-    if (chatId) {
-      // If we have a chat ID but no conversation messages, fetch the chat history
-      if (chatHistory.length === 0 && !historyLoading) {
-        console.log(`Fetching chat history for chatId ${chatId}`);
-        dispatch(fetchChatHistory({ 
-          chatId: chatId, 
-          projectName: getProjectName() 
-        }));
-      }
-      // If we have conversation messages, update the UI
-      else if (conversationMessages && conversationMessages.length > 0) {
-        console.log(`Setting ${conversationMessages.length} messages from conversation`);
-        setMessages(conversationMessages);
-      }
-    } else {
-      // No chatId means this is a new conversation
+    // For first time users (no chatId), immediately set isFirstLoad to false
+    if (!chatId) {
       setIsFirstLoad(false);
+      return;
+    }
+    
+    // If we have a chat ID but no conversation messages, fetch the chat history
+    if (chatId && chatHistory.length === 0 && !historyLoading) {
+      console.log(`Fetching chat history for chatId ${chatId}`);
+      dispatch(fetchChatHistory({ 
+        chatId: chatId, 
+        projectName: getProjectName() 
+      }));
+    }
+    // If we have conversation messages, update the UI
+    else if (conversationMessages && conversationMessages.length > 0) {
+      console.log(`Setting ${conversationMessages.length} messages from conversation`);
+      setMessages(conversationMessages);
+      setIsFirstLoad(false); // History loaded, not first load anymore
     }
     
     // If history loading completes, update firstLoad state
@@ -252,9 +264,8 @@ const Chatbox = () => {
     }
   };
 
-  // Show loading state only when history is loading AND this is not a first-time user
-  // For first-time users (no chatId) or after first load, show the welcome screen instead
-  if (historyLoading && !isFirstLoad && chatId) {
+  // Simplified loading condition - only show for returning users with a chatId
+  if (historyLoading && chatId) {
     return (
       <div 
         className="flex flex-col items-center justify-center h-[calc(100vh-140px)]"
