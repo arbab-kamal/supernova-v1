@@ -11,7 +11,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { startNewChat, selectChatId } from '@/store/chatSlice';
 import { selectCurrentProject } from '@/store/projectSlice';
-import { fetchConversationById } from '@/store/historySlice';
+import {selectChatStatus} from "@/store/chat"
 import {
   MessageCircle,
   Wand2,
@@ -36,27 +36,18 @@ const Sidebar = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [chatCountList, setChatCountList] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
   const chatId = useSelector(selectChatId);
+  const chatStatus = useSelector(selectChatStatus); // Add this selector
   const selectedProject = useSelector(selectCurrentProject);
   
-  // Handle new chat creation with delayed refresh
+  // Handle new chat creation
   const handleNewChat = async () => {
     dispatch(startNewChat());
     router.push('/chat');
-    
-    // Give the backend time to register the new chat before fetching counts
-    // First refresh immediately to show loading state
-    setIsLoading(true);
-    
-    // Then set up a delayed refresh after backend has likely updated
-    setTimeout(() => {
-      setRefreshTrigger(prev => prev + 1);
-    }, 1000); // Adjust this timeout based on your backend response time
   };
   
   // Function to get project name - robust method
@@ -117,7 +108,7 @@ const Sidebar = () => {
     fetchUsername();
   }, []);
 
-  // Fetch chat count
+  // Fetch chat count - now triggered by chatStatus changes
   useEffect(() => {
     const fetchChatCount = async () => {
       if (!selectedProject) return;
@@ -150,12 +141,7 @@ const Sidebar = () => {
 
     fetchChatCount();
     
-    // Set up polling to periodically check for updated chat counts
-    // This ensures we get fresh data from backend
-    const pollingInterval = setInterval(fetchChatCount, 10000); // Poll every 10 seconds
-    
-    return () => clearInterval(pollingInterval);
-  }, [selectedProject, refreshTrigger]); // Add refreshTrigger to dependency array
+  }, [selectedProject, chatStatus]); // Now depends on chatStatus from Redux
 
   const handleLogout = async () => {
     try {
@@ -199,7 +185,32 @@ const Sidebar = () => {
 
   // Manual refresh button handler
   const handleManualRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
+    const fetchChatCount = async () => {
+      setIsLoading(true);
+      try {
+        const projectName = getProjectName();
+        const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+        
+        const response = await axios.get(`${baseURL}/chatCount`, {
+          params: {
+            projectName
+          },
+          withCredentials: true
+        });
+        
+        if (Array.isArray(response.data)) {
+          setChatCountList(response.data.map(count => Number(count) || 0));
+        } else {
+          setChatCountList([]);
+        }
+      } catch (err) {
+        console.error("Error fetching chat count:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchChatCount();
   };
 
   return (
