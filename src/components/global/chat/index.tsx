@@ -11,10 +11,10 @@ import { useSelector, useDispatch } from "react-redux";
 import { selectCurrentProject } from "@/store/projectSlice";
 import { selectChatId, selectResetFlag } from "@/store/chatSlice";
 import { 
-  selectConversationMessages, 
-  selectConversationLoading,
-  clearConversation,
-  fetchConversationById 
+  selectChatHistory, 
+  selectHistoryLoading,
+  clearHistory,
+  fetchChatHistory 
 } from "@/store/historySlice";
 
 interface Message {
@@ -36,8 +36,8 @@ const Chatbox = () => {
   const chatId = useSelector(selectChatId);
   const resetFlag = useSelector(selectResetFlag);
   const selectedProject = useSelector(selectCurrentProject);
-  const conversationMessages = useSelector(selectConversationMessages);
-  const conversationLoading = useSelector(selectConversationLoading);
+  const chatHistory = useSelector(selectChatHistory);
+  const historyLoading = useSelector(selectHistoryLoading);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -139,42 +139,47 @@ const Chatbox = () => {
   // Reset messages when resetFlag changes (triggered by the new chat action)
   useEffect(() => {
     setMessages([]);
-    dispatch(clearConversation());
+    dispatch(clearHistory());
   }, [resetFlag, dispatch]);
 
   // Enhanced debugging of state changes
   useEffect(() => {
     console.log("Current state:", {
       chatId,
-      conversationMessages: conversationMessages?.length || 0,
-      conversationLoading,
+      chatHistory: chatHistory?.length || 0,
+      historyLoading,
       messages: messages?.length || 0
     });
-  }, [chatId, conversationMessages, conversationLoading, messages]);
+  }, [chatId, chatHistory, historyLoading, messages]);
 
-  // Load conversation when chatId changes or when conversation messages are loaded
+  // Load chat history when chatId changes or when history is loaded
   useEffect(() => {
-    if (chatId && !conversationLoading) {
-      // If we have a chat ID but no messages, fetch the conversation
-      if (conversationMessages.length === 0 && !conversationLoading) {
-        console.log(`Fetching conversation for chatId ${chatId}`);
-        dispatch(fetchConversationById({ 
-          conversationId: chatId, 
+    if (chatId && !historyLoading) {
+      // If we have a chat ID but no history, fetch the chat history
+      if (chatHistory.length === 0 && !historyLoading) {
+        console.log(`Fetching chat history for chatId ${chatId}`);
+        dispatch(fetchChatHistory({ 
+          chatId: chatId, 
           projectName: getProjectName() 
         }));
       }
-      // If we have messages, update the UI
-      else if (conversationMessages.length > 0) {
-        console.log(`Setting ${conversationMessages.length} messages from conversation`);
-        setMessages(conversationMessages);
+      // If we have history, update the UI
+      else if (chatHistory.length > 0) {
+        console.log(`Setting ${chatHistory.length} messages from history`);
+        // Transform the history data into messages format
+        const formattedMessages = chatHistory.map(item => ({
+          text: item.isUser ? item.question : item.reply,
+          sender: item.isUser ? 'user' : 'ai'
+        }));
+        setMessages(formattedMessages);
       }
     }
-  }, [chatId, conversationMessages, conversationLoading, dispatch, getProjectName]);
+  }, [chatId, chatHistory, historyLoading, dispatch, getProjectName]);
 
-  // Clean up conversation data when component unmounts
+  // Clean up history data when component unmounts
   useEffect(() => {
     return () => {
-      dispatch(clearConversation());
+      dispatch(clearHistory());
     };
   }, [dispatch]);
 
@@ -241,15 +246,15 @@ const Chatbox = () => {
     }
   };
 
-  // Show loading state when conversation is being loaded from history
-  if (conversationLoading) {
+  // Show loading state when history is being loaded
+  if (historyLoading) {
     return (
       <div 
         className="flex flex-col items-center justify-center h-[calc(100vh-140px)]"
         style={{ backgroundColor: colors.bg.main }}
       >
         <div className="w-8 h-8 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
-        <p className="mt-4 text-sm text-gray-500">Loading conversation...</p>
+        <p className="mt-4 text-sm text-gray-500">Loading chat history...</p>
       </div>
     );
   }

@@ -11,7 +11,9 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { startNewChat, selectChatId, selectChatStatus } from "@/store/chatSlice";
 import { selectCurrentProject } from "@/store/projectSlice";
-import { fetchChatHistory, fetchConversationById } from "@/store/historySlice";
+import { 
+  fetchChatHistory 
+} from "@/store/historySlice";
 import { setChatId } from "@/store/chatSlice";
 import {
   MessageCircle,
