@@ -27,6 +27,7 @@ const Chatbox = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [userInitial, setUserInitial] = useState<string>("");
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -155,23 +156,31 @@ const Chatbox = () => {
 
   // Load chat history when chatId changes or when history is loaded
   // If we have history, update the UI
-useEffect(() => {
-  if (chatId && !historyLoading) {
-    // If we have a chat ID but no conversation messages, fetch the chat history
-    if (chatHistory.length === 0 && !historyLoading) {
-      console.log(`Fetching chat history for chatId ${chatId}`);
-      dispatch(fetchChatHistory({ 
-        chatId: chatId, 
-        projectName: getProjectName() 
-      }));
+  useEffect(() => {
+    if (chatId) {
+      // If we have a chat ID but no conversation messages, fetch the chat history
+      if (chatHistory.length === 0 && !historyLoading) {
+        console.log(`Fetching chat history for chatId ${chatId}`);
+        dispatch(fetchChatHistory({ 
+          chatId: chatId, 
+          projectName: getProjectName() 
+        }));
+      }
+      // If we have conversation messages, update the UI
+      else if (conversationMessages && conversationMessages.length > 0) {
+        console.log(`Setting ${conversationMessages.length} messages from conversation`);
+        setMessages(conversationMessages);
+      }
+    } else {
+      // No chatId means this is a new conversation
+      setIsFirstLoad(false);
     }
-    // If we have conversation messages, update the UI
-    else if (conversationMessages && conversationMessages.length > 0) {
-      console.log(`Setting ${conversationMessages.length} messages from conversation`);
-      setMessages(conversationMessages);
+    
+    // If history loading completes, update firstLoad state
+    if (!historyLoading && isFirstLoad) {
+      setIsFirstLoad(false);
     }
-  }
-}, [chatId, chatHistory, conversationMessages, historyLoading, dispatch, getProjectName]);
+  }, [chatId, chatHistory, conversationMessages, historyLoading, dispatch, getProjectName, isFirstLoad]);
 
   // Clean up history data when component unmounts
   useEffect(() => {
@@ -243,8 +252,9 @@ useEffect(() => {
     }
   };
 
-  // Show loading state when history is being loaded
-  if (historyLoading) {
+  // Show loading state only when history is loading AND this is not a first-time user
+  // For first-time users (no chatId) or after first load, show the welcome screen instead
+  if (historyLoading && !isFirstLoad && chatId) {
     return (
       <div 
         className="flex flex-col items-center justify-center h-[calc(100vh-140px)]"
