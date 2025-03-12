@@ -7,6 +7,8 @@ const initialState = {
   loading: false,
   conversationLoading: false,
   error: null,
+  currentChatId: null,
+  currentProjectName: null,
 };
 
 export const fetchChatHistory = createAsyncThunk(
@@ -18,7 +20,7 @@ export const fetchChatHistory = createAsyncThunk(
         params: { chatId, projectName },
         withCredentials: true,
       });
-      return response.data;
+      return { data: response.data, chatId, projectName };
     } catch (err) {
       return rejectWithValue(err.response?.data || 'Failed to fetch chat history');
     }
@@ -57,6 +59,33 @@ export const historySlice = createSlice({
     },
     clearConversation: (state) => {
       state.conversationMessages = [];
+    },
+    setCurrentChat: (state, action) => {
+      state.currentChatId = action.payload.chatId;
+      state.currentProjectName = action.payload.projectName;
+    },
+    addToHistory: (state, action) => {
+      // Add a new chat to history if it doesn't exist
+      const existingIndex = state.chatHistory.findIndex(
+        chat => chat.id === action.payload.id
+      );
+      
+      if (existingIndex === -1) {
+        state.chatHistory.unshift(action.payload); // Add to beginning of array
+      } else {
+        // Update existing chat
+        state.chatHistory[existingIndex] = {
+          ...state.chatHistory[existingIndex],
+          ...action.payload
+        };
+      }
+    },
+    updateChatTitle: (state, action) => {
+      const { chatId, title } = action.payload;
+      const chatIndex = state.chatHistory.findIndex(chat => chat.id === chatId);
+      if (chatIndex !== -1) {
+        state.chatHistory[chatIndex].title = title;
+      }
     }
   },
   extraReducers: (builder) => {
@@ -66,7 +95,9 @@ export const historySlice = createSlice({
         state.error = null;
       })
       .addCase(fetchChatHistory.fulfilled, (state, action) => {
-        state.chatHistory = action.payload;
+        state.chatHistory = action.payload.data;
+        state.currentChatId = action.payload.chatId;
+        state.currentProjectName = action.payload.projectName;
         state.loading = false;
       })
       .addCase(fetchChatHistory.rejected, (state, action) => {
@@ -88,7 +119,13 @@ export const historySlice = createSlice({
   },
 });
 
-export const { clearHistory, clearConversation } = historySlice.actions;
+export const { 
+  clearHistory, 
+  clearConversation, 
+  setCurrentChat, 
+  addToHistory, 
+  updateChatTitle 
+} = historySlice.actions;
 
 // Selectors
 export const selectChatHistory = (state) => state.history.chatHistory;
@@ -96,5 +133,7 @@ export const selectConversationMessages = (state) => state.history.conversationM
 export const selectHistoryLoading = (state) => state.history.loading;
 export const selectConversationLoading = (state) => state.history.conversationLoading;
 export const selectHistoryError = (state) => state.history.error;
+export const selectCurrentChatId = (state) => state.history.currentChatId;
+export const selectCurrentProjectName = (state) => state.history.currentProjectName;
 
 export default historySlice.reducer;
