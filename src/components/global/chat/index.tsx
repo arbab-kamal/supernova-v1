@@ -10,6 +10,11 @@ import axios from "axios";
 import { useSelector, useDispatch } from "react-redux";
 import { selectCurrentProject } from "@/store/projectSlice";
 import { selectChatId, selectResetFlag } from "@/store/chatSlice";
+import { 
+  selectConversationMessages, 
+  selectConversationLoading,
+  clearConversation 
+} from "@/store/historySlice";
 
 interface Message {
   text: string;
@@ -25,10 +30,13 @@ const Chatbox = () => {
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
   
-  // Use Redux instead of local state for chatId
+  // Redux state
+  const dispatch = useDispatch();
   const chatId = useSelector(selectChatId);
   const resetFlag = useSelector(selectResetFlag);
   const selectedProject = useSelector(selectCurrentProject);
+  const conversationMessages = useSelector(selectConversationMessages);
+  const conversationLoading = useSelector(selectConversationLoading);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +138,22 @@ const Chatbox = () => {
   // Reset messages when resetFlag changes (triggered by the new chat action)
   useEffect(() => {
     setMessages([]);
-  }, [resetFlag]);
+    dispatch(clearConversation());
+  }, [resetFlag, dispatch]);
+
+  // Load conversation messages if available
+  useEffect(() => {
+    if (conversationMessages && conversationMessages.length > 0) {
+      setMessages(conversationMessages);
+    }
+  }, [conversationMessages]);
+
+  // Clean up conversation data when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearConversation());
+    };
+  }, [dispatch]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -194,6 +217,19 @@ const Chatbox = () => {
       }
     }
   };
+
+  // Show loading state when conversation is being loaded from history
+  if (conversationLoading) {
+    return (
+      <div 
+        className="flex flex-col items-center justify-center h-[calc(100vh-140px)]"
+        style={{ backgroundColor: colors.bg.main }}
+      >
+        <div className="w-8 h-8 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm text-gray-500">Loading conversation...</p>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -264,7 +300,7 @@ const Chatbox = () => {
                       : '#FFFFFF' 
                   }}
                 >
-                  {message.sender === "ai" && index === messages.length - 1 ? (
+                  {message.sender === "ai" && index === messages.length - 1 && !conversationMessages.length ? (
                     <Typewriter text={message.text} speed={20} />
                   ) : (
                     message.text
@@ -321,7 +357,11 @@ const Chatbox = () => {
               }}
               disabled={isLoading}
             >
-              <Send className="w-5 h-5" />
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
             </button>
           </div>
         </form>

@@ -11,6 +11,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { startNewChat, selectChatId } from '@/store/chatSlice';
 import { selectCurrentProject } from '@/store/projectSlice';
+import { fetchConversationById } from '@/store/historySlice';
 import {
   MessageCircle,
   Wand2,
@@ -24,7 +25,7 @@ import {
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 
 const Sidebar = () => {
@@ -35,12 +36,14 @@ const Sidebar = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const pathname = usePathname();
+  const router = useRouter();
   const dispatch = useDispatch();
   const chatId = useSelector(selectChatId);
   const selectedProject = useSelector(selectCurrentProject);
   
   const handleNewChat = () => {
     dispatch(startNewChat());
+    router.push('/chat');
   };
   
   // Function to get project name - robust method
@@ -65,6 +68,26 @@ const Sidebar = () => {
     }
     
     return "default";
+  };
+
+  // Handle history item click
+  const handleHistoryItemClick = (item) => {
+    // Get conversation ID from the item
+    // Adjust this based on your actual data structure
+    const conversationId = item.id || item.conversationId;
+    
+    if (conversationId) {
+      const projectName = getProjectName();
+      
+      // Dispatch action to fetch conversation messages
+      dispatch(fetchConversationById({ 
+        conversationId, 
+        projectName 
+      }));
+      
+      // Navigate to the chat page
+      router.push('/chat');
+    }
   };
 
   useEffect(() => {
@@ -282,7 +305,11 @@ const Sidebar = () => {
                   <div className="text-xs text-white/70 italic py-2">No chat history</div>
                 ) : (
                   chatHistory.map((item, index) => (
-                    <div key={index} className="hover:bg-white/10 rounded-md p-2 cursor-pointer text-sm">
+                    <div 
+                      key={index} 
+                      className="hover:bg-white/10 rounded-md p-2 cursor-pointer text-sm"
+                      onClick={() => handleHistoryItemClick(item)}
+                    >
                       <div className="font-medium">{truncateText(item.question || "Conversation")}</div>
                       <div className="text-xs text-white/70">{truncateText(item.reply, 35)}</div>
                     </div>
