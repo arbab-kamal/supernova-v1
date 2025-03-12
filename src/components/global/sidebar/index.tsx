@@ -11,7 +11,8 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { startNewChat, selectChatId, selectChatStatus } from "@/store/chatSlice";
 import { selectCurrentProject } from "@/store/projectSlice";
-
+import { fetchConversationById } from "@/store/historySlice";
+import { setChatId } from "@/store/chatSlice";
 import {
   MessageCircle,
   Wand2,
@@ -224,7 +225,24 @@ const Sidebar = () => {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
-
+  const handleChatSelect = (index) => {
+    setActiveChatIndex(index);
+    // Set the chat ID to the selected chat's index + 1 (since chat IDs start at 1)
+    const selectedChatId = index + 1;
+    dispatch(setChatId(selectedChatId));
+    
+    // Fetch the conversation history for this chat
+    const projectName = getProjectName();
+    dispatch(fetchConversationById({ 
+      conversationId: selectedChatId, 
+      projectName 
+    }));
+    
+    // Navigate to chat page if not already there
+    if (pathname !== '/chat') {
+      router.push('/chat');
+    }
+  };
   // Manual refresh for chat counts
   const handleManualRefresh = () => {
     const fetchChatCount = async () => {
@@ -358,6 +376,7 @@ const Sidebar = () => {
                 chatCountList.map((count, index) => (
                   <button
                     key={index}
+                    onClick={() => handleChatSelect(index)}
                     className={`flex items-center justify-between w-full bg-white/10 hover:bg-white/20 rounded-md p-2 mb-2 transition-colors ${
                       activeChatIndex === index ? 'ring-2 ring-white/40' : ''
                     }`}
