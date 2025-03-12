@@ -23,6 +23,7 @@ import {
   ChevronUp,
   FolderGit2,
   BarChart,
+  MessageSquare,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
@@ -31,9 +32,8 @@ import axios from "axios";
 
 const Sidebar = () => {
   const [isPromptOpen, setIsPromptOpen] = useState(true);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [isChatCountOpen, setIsChatCountOpen] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
-  const [chatCount, setChatCount] = useState<number | null>(null);
   const [chatCountList, setChatCountList] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -123,21 +123,15 @@ const Sidebar = () => {
           withCredentials: true
         });
         
-        // Store the original list
+        // Store the counts
         if (Array.isArray(response.data)) {
           setChatCountList(response.data.map(count => Number(count) || 0));
-          
-          // Calculate the total
-          const total = response.data.reduce((sum, count) => sum + (Number(count) || 0), 0);
-          setChatCount(total);
         } else {
           setChatCountList([]);
-          setChatCount(0);
         }
       } catch (err) {
         console.error("Error fetching chat count:", err);
         setChatCountList([]);
-        setChatCount(0);
       } finally {
         setIsLoading(false);
       }
@@ -199,7 +193,7 @@ const Sidebar = () => {
         <h1 className="text-xl font-semibold">SuperNova</h1>
       </div>
 
-      {/* Project Info with Chat Count */}
+      {/* Project Info */}
       <div className="bg-white/10 rounded-lg p-3 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -266,69 +260,52 @@ const Sidebar = () => {
 
         <Separator className="my-2 bg-white/20" />
 
-        {/* Chat Count Section (Replacing History) */}
+        {/* Chat Count Section */}
         <div>
           <button
             className={`flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10`}
           >
             <div className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
-              <span className="font-medium">Chat Statistics</span>
+              <span className="font-medium">Chat Count</span>
             </div>
-            {isHistoryOpen ? (
+            {isChatCountOpen ? (
               <ChevronDown
                 className="w-4 h-4"
-                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                onClick={() => setIsChatCountOpen(!isChatCountOpen)}
               />
             ) : (
               <ChevronUp
                 className="w-4 h-4"
-                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                onClick={() => setIsChatCountOpen(!isChatCountOpen)}
               />
             )}
           </button>
 
-          {isHistoryOpen && (
+          {isChatCountOpen && (
             <>
               <div className="ml-6 space-y-2 pr-2">
                 {isLoading ? (
                   <div className="text-center py-2">
                     <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
                   </div>
+                ) : chatCountList.length === 0 ? (
+                  <div className="text-xs text-white/70 italic py-2">No chat count data available</div>
                 ) : (
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Total Chats:</span>
-                      <span className="text-lg font-bold">{chatCount}</span>
-                    </div>
-                    
-                    {chatCountList.length > 0 && (
-                      <div className="mt-3">
-                        <div className="text-xs text-white/70 mb-2">User Chat Distribution:</div>
-                        <div className="flex items-end h-20 gap-1">
-                          {chatCountList.map((count, index) => {
-                            // Find the max count for relative sizing
-                            const maxCount = Math.max(...chatCountList);
-                            const relativeHeight = maxCount > 0 ? (count / maxCount) * 100 : 0;
-                            
-                            return (
-                              <div key={index} className="flex flex-col items-center flex-1">
-                                <div className="text-xs mb-1">{count}</div>
-                                <div 
-                                  className="bg-white/50 rounded-t-sm w-full" 
-                                  style={{ 
-                                    height: `${relativeHeight}%`,
-                                    minHeight: count > 0 ? '4px' : '0'
-                                  }}
-                                ></div>
-                                <div className="text-xs mt-1">U{index + 1}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  chatCountList.map((count, index) => (
+                    <button
+                      key={index}
+                      className="flex items-center justify-between w-full bg-white/10 hover:bg-white/20 rounded-md p-2 mb-2 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        <span className="font-medium">User {index + 1}</span>
                       </div>
-                    )}
-                  </div>
+                      <div className="bg-blue-500 px-2 py-1 rounded-full text-xs font-bold">
+                        {count}
+                      </div>
+                    </button>
+                  ))
                 )}
               </div>
             </>
