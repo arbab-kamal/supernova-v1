@@ -32,8 +32,8 @@ export const fetchConversationById = createAsyncThunk(
   async ({ conversationId, projectName }, { rejectWithValue }) => {
     try {
       const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-      const response = await axios.get(`${baseURL}/chatHistory`, {
-        params: { chatId, projectName },
+      const response = await axios.get(`${baseURL}/conversation`, {
+        params: { conversationId, projectName },
         withCredentials: true,
       });
       
