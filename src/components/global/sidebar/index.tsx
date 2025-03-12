@@ -36,17 +36,34 @@ const Sidebar = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [chatCountList, setChatCountList] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [localChatId, setLocalChatId] = useState<string | null>(null);
 
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
   const chatId = useSelector(selectChatId);
-  const chatStatus = useSelector(selectChatStatus); // Add this selector
+  const chatStatus = useSelector(selectChatStatus);
   const selectedProject = useSelector(selectCurrentProject);
   
-  // Handle new chat creation
+  // Handle new chat creation with immediate count increment
   const handleNewChat = async () => {
+    // Get the current highest chat index
+    const highestIndex = chatCountList.length;
+    const newChatIndex = highestIndex;
+    
+    // Create a new chat in Redux
     dispatch(startNewChat());
+    
+    // Update local state immediately to show the new chat in the sidebar
+    const newChatList = [...chatCountList];
+    // Add a new chat with count 0 (will be incremented as messages are added)
+    newChatList[newChatIndex] = 0;
+    setChatCountList(newChatList);
+    
+    // Store the current chat ID locally to track changes
+    setLocalChatId(Date.now().toString());
+    
+    // Navigate to the chat page
     router.push('/chat');
   };
   
@@ -108,7 +125,7 @@ const Sidebar = () => {
     fetchUsername();
   }, []);
 
-  // Fetch chat count - now triggered by chatStatus changes
+  // Initial chat count fetch
   useEffect(() => {
     const fetchChatCount = async () => {
       if (!selectedProject) return;
@@ -140,8 +157,60 @@ const Sidebar = () => {
     };
 
     fetchChatCount();
+  }, [selectedProject]);
+  
+  // Effect to update chat count when a message is sent
+  useEffect(() => {
+    // If we have a chat ID and the status is completed, increment count for the current chat
+    if (chatId && chatStatus === 'completed' && localChatId === chatId) {
+      const currentChatIndex = chatCountList.length - 1;
+      if (currentChatIndex >= 0) {
+        const updatedCounts = [...chatCountList];
+        updatedCounts[currentChatIndex] = (updatedCounts[currentChatIndex] || 0) + 1;
+        setChatCountList(updatedCounts);
+      }
+    }
+  }, [chatStatus, chatId, localChatId]);
+  
+  // Effect to sync with backend periodically
+  useEffect(() => {
+    const syncWithBackend = async () => {
+      if (!selectedProject) return;
+      
+      try {
+        const projectName = getProjectName();
+        const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+        
+        const response = await axios.get(`${baseURL}/chatCount`, {
+          params: {
+            projectName
+          },
+          withCredentials: true
+        });
+        
+        // Update counts from backend, but preserve our local state for active chat
+        if (Array.isArray(response.data)) {
+          const backendCounts = response.data.map(count => Number(count) || 0);
+          
+          // If we have a new chat that's not yet in the backend, preserve it
+          if (chatId && localChatId === chatId && backendCounts.length < chatCountList.length) {
+            const mergedCounts = [...backendCounts];
+            mergedCounts[chatCountList.length - 1] = chatCountList[chatCountList.length - 1];
+            setChatCountList(mergedCounts);
+          } else {
+            setChatCountList(backendCounts);
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing with backend:", err);
+      }
+    };
+
+    // Sync with backend every 5 seconds
+    const intervalId = setInterval(syncWithBackend, 5000);
     
-  }, [selectedProject, chatStatus]); // Now depends on chatStatus from Redux
+    return () => clearInterval(intervalId);
+  }, [selectedProject, chatId, localChatId]);
 
   const handleLogout = async () => {
     try {
@@ -327,7 +396,9 @@ const Sidebar = () => {
                   chatCountList.map((count, index) => (
                     <button
                       key={index}
-                      className="flex items-center justify-between w-full bg-white/10 hover:bg-white/20 rounded-md p-2 mb-2 transition-colors"
+                      className={`flex items-center justify-between w-full bg-white/10 hover:bg-white/20 rounded-md p-2 mb-2 transition-colors ${
+                        index === chatCountList.length - 1 && chatId && localChatId === chatId ? 'ring-2 ring-white/40' : ''
+                      }`}
                     >
                       <div className="flex items-center gap-2">
                         <MessageSquare className="w-4 h-4" />
