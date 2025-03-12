@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   FolderGit2,
+  BarChart,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
@@ -32,8 +33,9 @@ const Sidebar = () => {
   const [isPromptOpen, setIsPromptOpen] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [chatCount, setChatCount] = useState<number | null>(null);
+  const [chatCountList, setChatCountList] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -70,26 +72,6 @@ const Sidebar = () => {
     return "default";
   };
 
-  // Handle history item click
-  const handleHistoryItemClick = (item) => {
-    // Get conversation ID from the item
-    // Adjust this based on your actual data structure
-    const conversationId = item.id || item.conversationId;
-    
-    if (conversationId) {
-      const projectName = getProjectName();
-      
-      // Dispatch action to fetch conversation messages
-      dispatch(fetchConversationById({ 
-        conversationId, 
-        projectName 
-      }));
-      
-      // Navigate to the chat page
-      router.push('/chat');
-    }
-  };
-
   useEffect(() => {
     const fetchUsername = async () => {
       try {
@@ -123,44 +105,46 @@ const Sidebar = () => {
 
     fetchUsername();
   }, []);
-  
-  // Fetch chat history
+
+  // Fetch chat count
   useEffect(() => {
-    const fetchChatHistory = async () => {
-      if (!chatId) return;
+    const fetchChatCount = async () => {
+      if (!selectedProject) return;
       
-      setHistoryLoading(true);
+      setIsLoading(true);
       try {
         const projectName = getProjectName();
         const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
         
-        const response = await axios.get(`${baseURL}/chatHistory`, {
+        const response = await axios.get(`${baseURL}/chatCount`, {
           params: {
-            chatId,
             projectName
           },
           withCredentials: true
         });
         
-        // Set chat history from response
+        // Store the original list
         if (Array.isArray(response.data)) {
-          setChatHistory(response.data);
+          setChatCountList(response.data.map(count => Number(count) || 0));
+          
+          // Calculate the total
+          const total = response.data.reduce((sum, count) => sum + (Number(count) || 0), 0);
+          setChatCount(total);
         } else {
-          console.error("Unexpected response format:", response.data);
-          setChatHistory([]);
+          setChatCountList([]);
+          setChatCount(0);
         }
       } catch (err) {
-        console.error("Error fetching chat history:", err);
-        setChatHistory([]);
+        console.error("Error fetching chat count:", err);
+        setChatCountList([]);
+        setChatCount(0);
       } finally {
-        setHistoryLoading(false);
+        setIsLoading(false);
       }
     };
 
-    if (isHistoryOpen) {
-      fetchChatHistory();
-    }
-  }, [chatId, selectedProject, isHistoryOpen]);
+    fetchChatCount();
+  }, [selectedProject]);
 
   const handleLogout = async () => {
     try {
@@ -202,6 +186,9 @@ const Sidebar = () => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+  // Get current project name for display
+  const currentProjectName = getProjectName();
+
   return (
     <div className="w-64 h-screen bg-gradient-to-b from-blue-600 to-blue-400 p-4 text-white flex flex-col">
       {/* Header */}
@@ -210,6 +197,17 @@ const Sidebar = () => {
           <MessageCircle className="w-5 h-5 text-blue-600" />
         </div>
         <h1 className="text-xl font-semibold">SuperNova</h1>
+      </div>
+
+      {/* Project Info with Chat Count */}
+      <div className="bg-white/10 rounded-lg p-3 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FolderGit2 className="w-4 h-4" />
+            <span className="font-medium text-sm">Project:</span>
+          </div>
+          <span className="text-sm font-bold">{truncateText(currentProjectName)}</span>
+        </div>
       </div>
 
       {/* New Chat Button */}
@@ -268,19 +266,15 @@ const Sidebar = () => {
 
         <Separator className="my-2 bg-white/20" />
 
-        {/* History Section */}
+        {/* Chat Count Section (Replacing History) */}
         <div>
           <button
-            className={`flex items-center justify-between w-full mb-2 p-2 rounded-md ${
-              pathname === "/chat/history" ? "bg-white/20" : "hover:bg-white/10"
-            }`}
+            className={`flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10`}
           >
-            <Link href="/chat/history">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span className="font-medium">History</span>
-              </div>
-            </Link>
+            <div className="flex items-center gap-2">
+              <BarChart className="w-4 h-4" />
+              <span className="font-medium">Chat Statistics</span>
+            </div>
             {isHistoryOpen ? (
               <ChevronDown
                 className="w-4 h-4"
@@ -296,24 +290,45 @@ const Sidebar = () => {
 
           {isHistoryOpen && (
             <>
-              <div className="ml-6 space-y-2 max-h-48 overflow-y-auto pr-2">
-                {historyLoading ? (
+              <div className="ml-6 space-y-2 pr-2">
+                {isLoading ? (
                   <div className="text-center py-2">
                     <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
                   </div>
-                ) : chatHistory.length === 0 ? (
-                  <div className="text-xs text-white/70 italic py-2">No chat history</div>
                 ) : (
-                  chatHistory.map((item, index) => (
-                    <div 
-                      key={index} 
-                      className="hover:bg-white/10 rounded-md p-2 cursor-pointer text-sm"
-                      onClick={() => handleHistoryItemClick(item)}
-                    >
-                      <div className="font-medium">{truncateText(item.question || "Conversation")}</div>
-                      <div className="text-xs text-white/70">{truncateText(item.reply, 35)}</div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Total Chats:</span>
+                      <span className="text-lg font-bold">{chatCount}</span>
                     </div>
-                  ))
+                    
+                    {chatCountList.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs text-white/70 mb-2">User Chat Distribution:</div>
+                        <div className="flex items-end h-20 gap-1">
+                          {chatCountList.map((count, index) => {
+                            // Find the max count for relative sizing
+                            const maxCount = Math.max(...chatCountList);
+                            const relativeHeight = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                            
+                            return (
+                              <div key={index} className="flex flex-col items-center flex-1">
+                                <div className="text-xs mb-1">{count}</div>
+                                <div 
+                                  className="bg-white/50 rounded-t-sm w-full" 
+                                  style={{ 
+                                    height: `${relativeHeight}%`,
+                                    minHeight: count > 0 ? '4px' : '0'
+                                  }}
+                                ></div>
+                                <div className="text-xs mt-1">U{index + 1}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </>
