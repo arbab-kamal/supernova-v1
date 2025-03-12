@@ -11,7 +11,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { startNewChat, selectChatId, selectChatStatus } from "@/store/chatSlice";
 import { selectCurrentProject } from "@/store/projectSlice";
-import { fetchConversationById } from "@/store/historySlice";
+import { fetchChatHistory, fetchConversationById } from "@/store/historySlice";
 import { setChatId } from "@/store/chatSlice";
 import {
   MessageCircle,
@@ -231,12 +231,12 @@ const Sidebar = () => {
     const selectedChatId = index + 1;
     dispatch(setChatId(selectedChatId));
     
-    // Fetch the conversation history for this chat
+    // Fetch the chat history for this chat using fetchChatHistory instead
     const projectName = getProjectName();
-    // dispatch(fetchConversationById({ 
-    //   conversationId: selectedChatId, 
-    //   projectName 
-    // }));
+    dispatch(fetchChatHistory({ 
+      chatId: selectedChatId, 
+      projectName 
+    }));
     
     // Navigate to chat page if not already there
     if (pathname !== '/chat') {
