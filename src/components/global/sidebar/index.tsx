@@ -233,10 +233,10 @@ const Sidebar = () => {
     
     // Fetch the conversation history for this chat
     const projectName = getProjectName();
-    dispatch(fetchConversationById({ 
-      conversationId: selectedChatId, 
-      projectName 
-    }));
+    // dispatch(fetchConversationById({ 
+    //   conversationId: selectedChatId, 
+    //   projectName 
+    // }));
     
     // Navigate to chat page if not already there
     if (pathname !== '/chat') {
