@@ -119,6 +119,7 @@ export const historySlice = createSlice({
       })
       .addCase(fetchChatHistory.fulfilled, (state, action) => {
         state.chatHistory = action.payload.data;
+        state.conversationMessages = action.payload.messages; // Store the transformed messages
         state.currentChatId = action.payload.chatId;
         state.currentProjectName = action.payload.projectName;
         state.loading = false;
@@ -138,13 +139,6 @@ export const historySlice = createSlice({
       .addCase(fetchConversationById.rejected, (state, action) => {
         state.conversationLoading = false;
         state.error = action.payload;
-      })
-      .addCase(fetchChatHistory.fulfilled, (state, action) => {
-        state.chatHistory = action.payload.data;
-        state.conversationMessages = action.payload.messages; // Store the transformed messages
-        state.currentChatId = action.payload.chatId;
-        state.currentProjectName = action.payload.projectName;
-        state.loading = false;
       })
   },
 });
