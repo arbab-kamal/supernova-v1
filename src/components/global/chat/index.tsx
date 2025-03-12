@@ -14,7 +14,8 @@ import {
   selectChatHistory, 
   selectHistoryLoading,
   clearHistory,
-  fetchChatHistory 
+  fetchChatHistory,
+  selectConversationMessages,
 } from "@/store/historySlice";
 
 interface Message {
@@ -38,7 +39,7 @@ const Chatbox = () => {
   const selectedProject = useSelector(selectCurrentProject);
   const chatHistory = useSelector(selectChatHistory);
   const historyLoading = useSelector(selectHistoryLoading);
-
+  const conversationMessages = useSelector(selectConversationMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Function to get project name - robust method to handle different formats
@@ -153,28 +154,24 @@ const Chatbox = () => {
   }, [chatId, chatHistory, historyLoading, messages]);
 
   // Load chat history when chatId changes or when history is loaded
-  useEffect(() => {
-    if (chatId && !historyLoading) {
-      // If we have a chat ID but no history, fetch the chat history
-      if (chatHistory.length === 0 && !historyLoading) {
-        console.log(`Fetching chat history for chatId ${chatId}`);
-        dispatch(fetchChatHistory({ 
-          chatId: chatId, 
-          projectName: getProjectName() 
-        }));
-      }
-      // If we have history, update the UI
-      else if (chatHistory.length > 0) {
-        console.log(`Setting ${chatHistory.length} messages from history`);
-        // Transform the history data into messages format
-        const formattedMessages = chatHistory.map(item => ({
-          text: item.isUser ? item.question : item.reply,
-          sender: item.isUser ? 'user' : 'ai'
-        }));
-        setMessages(formattedMessages);
-      }
+  // If we have history, update the UI
+useEffect(() => {
+  if (chatId && !historyLoading) {
+    // If we have a chat ID but no conversation messages, fetch the chat history
+    if (chatHistory.length === 0 && !historyLoading) {
+      console.log(`Fetching chat history for chatId ${chatId}`);
+      dispatch(fetchChatHistory({ 
+        chatId: chatId, 
+        projectName: getProjectName() 
+      }));
     }
-  }, [chatId, chatHistory, historyLoading, dispatch, getProjectName]);
+    // If we have conversation messages, update the UI
+    else if (conversationMessages && conversationMessages.length > 0) {
+      console.log(`Setting ${conversationMessages.length} messages from conversation`);
+      setMessages(conversationMessages);
+    }
+  }
+}, [chatId, chatHistory, conversationMessages, historyLoading, dispatch, getProjectName]);
 
   // Clean up history data when component unmounts
   useEffect(() => {

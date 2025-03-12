@@ -20,7 +20,30 @@ export const fetchChatHistory = createAsyncThunk(
         params: { chatId, projectName },
         withCredentials: true,
       });
-      return { data: response.data, chatId, projectName };
+      
+      // Transform the data to match the expected format for messages
+      // Each item in the response has both question and reply
+      const messages = [];
+      response.data.forEach(item => {
+        // Add the user message
+        messages.push({
+          text: item.question,
+          sender: 'user'
+        });
+        
+        // Add the AI reply
+        messages.push({
+          text: item.reply,
+          sender: 'ai'
+        });
+      });
+      
+      return { 
+        data: response.data,  // Keep original data for reference
+        messages: messages,   // Add transformed messages
+        chatId, 
+        projectName 
+      };
     } catch (err) {
       return rejectWithValue(err.response?.data || 'Failed to fetch chat history');
     }
@@ -115,7 +138,14 @@ export const historySlice = createSlice({
       .addCase(fetchConversationById.rejected, (state, action) => {
         state.conversationLoading = false;
         state.error = action.payload;
-      });
+      })
+      .addCase(fetchChatHistory.fulfilled, (state, action) => {
+        state.chatHistory = action.payload.data;
+        state.conversationMessages = action.payload.messages; // Store the transformed messages
+        state.currentChatId = action.payload.chatId;
+        state.currentProjectName = action.payload.projectName;
+        state.loading = false;
+      })
   },
 });
 
