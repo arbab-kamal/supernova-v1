@@ -9,9 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDispatch, useSelector } from 'react-redux';
-import { startNewChat, selectChatId } from '@/store/chatSlice';
+import { startNewChat, selectChatId,selectChatStatus } from '@/store/chatSlice';
 import { selectCurrentProject } from '@/store/projectSlice';
-import {selectChatStatus} from "@/store/chat"
+
 import {
   MessageCircle,
   Wand2,
