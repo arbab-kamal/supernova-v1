@@ -36,6 +36,7 @@ const Sidebar = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [chatCountList, setChatCountList] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -43,11 +44,19 @@ const Sidebar = () => {
   const chatId = useSelector(selectChatId);
   const selectedProject = useSelector(selectCurrentProject);
   
-  const handleNewChat = () => {
+  // Handle new chat creation with delayed refresh
+  const handleNewChat = async () => {
     dispatch(startNewChat());
     router.push('/chat');
-    // We'll refetch chat counts after creating a new chat
-    // The actual fetch will happen in the useEffect when chatId changes
+    
+    // Give the backend time to register the new chat before fetching counts
+    // First refresh immediately to show loading state
+    setIsLoading(true);
+    
+    // Then set up a delayed refresh after backend has likely updated
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 1000); // Adjust this timeout based on your backend response time
   };
   
   // Function to get project name - robust method
@@ -108,47 +117,45 @@ const Sidebar = () => {
     fetchUsername();
   }, []);
 
-  // Function to fetch chat counts
-  const fetchChatCount = async () => {
-    if (!selectedProject) return;
-    
-    setIsLoading(true);
-    try {
-      const projectName = getProjectName();
-      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+  // Fetch chat count
+  useEffect(() => {
+    const fetchChatCount = async () => {
+      if (!selectedProject) return;
       
-      const response = await axios.get(`${baseURL}/chatCount`, {
-        params: {
-          projectName
-        },
-        withCredentials: true
-      });
-      
-      // Store the counts
-      if (Array.isArray(response.data)) {
-        setChatCountList(response.data.map(count => Number(count) || 0));
-      } else {
+      setIsLoading(true);
+      try {
+        const projectName = getProjectName();
+        const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+        
+        const response = await axios.get(`${baseURL}/chatCount`, {
+          params: {
+            projectName
+          },
+          withCredentials: true
+        });
+        
+        // Store the counts
+        if (Array.isArray(response.data)) {
+          setChatCountList(response.data.map(count => Number(count) || 0));
+        } else {
+          setChatCountList([]);
+        }
+      } catch (err) {
+        console.error("Error fetching chat count:", err);
         setChatCountList([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching chat count:", err);
-      setChatCountList([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  // Fetch chat count on initial load and when project changes
-  useEffect(() => {
     fetchChatCount();
-  }, [selectedProject]);
-  
-  // Refetch chat count when chatId changes (new chat created)
-  useEffect(() => {
-    if (chatId) {
-      fetchChatCount();
-    }
-  }, [chatId]);
+    
+    // Set up polling to periodically check for updated chat counts
+    // This ensures we get fresh data from backend
+    const pollingInterval = setInterval(fetchChatCount, 10000); // Poll every 10 seconds
+    
+    return () => clearInterval(pollingInterval);
+  }, [selectedProject, refreshTrigger]); // Add refreshTrigger to dependency array
 
   const handleLogout = async () => {
     try {
@@ -188,6 +195,11 @@ const Sidebar = () => {
   const truncateText = (text, maxLength = 25) => {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
+  // Manual refresh button handler
+  const handleManualRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -263,19 +275,32 @@ const Sidebar = () => {
           >
             <div className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
-              <span className="font-medium">Chat</span>
+              <span className="font-medium">Chat Count</span>
             </div>
-            {isChatCountOpen ? (
-              <ChevronDown
-                className="w-4 h-4"
-                onClick={() => setIsChatCountOpen(!isChatCountOpen)}
-              />
-            ) : (
-              <ChevronUp
-                className="w-4 h-4"
-                onClick={() => setIsChatCountOpen(!isChatCountOpen)}
-              />
-            )}
+            <div className="flex items-center gap-1">
+              {/* Refresh button */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleManualRefresh();
+                }}
+                className="p-1 hover:bg-white/20 rounded-full"
+                title="Refresh chat counts"
+              >
+                <Clock className="w-3 h-3 text-white" />
+              </button>
+              {isChatCountOpen ? (
+                <ChevronDown
+                  className="w-4 h-4"
+                  onClick={() => setIsChatCountOpen(!isChatCountOpen)}
+                />
+              ) : (
+                <ChevronUp
+                  className="w-4 h-4"
+                  onClick={() => setIsChatCountOpen(!isChatCountOpen)}
+                />
+              )}
+            </div>
           </button>
 
           {isChatCountOpen && (
