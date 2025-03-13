@@ -54,9 +54,24 @@ const UserManagement = () => {
         axios.get("http://localhost:8080/getTeams")
       ]);
       
-      setUsers(usersResponse.data);
+      // Process the user data to normalize field names
+      const processedUsers = usersResponse.data.map(user => {
+        // Create a normalized user object
+        return {
+          id: user.id || user.userId || user._id,
+          firstName: user.firstName || user.first_name || user.name?.split(' ')[0] || '',
+          lastName: user.lastName || user.last_name || (user.name?.split(' ').slice(1).join(' ')) || '',
+          email: user.email || '',
+          role: user.role || user.role_name || '',
+          team: user.team || user.team_name || ''
+        };
+      });
+      
+      setUsers(processedUsers);
       setRoles(rolesResponse.data);
       setTeams(teamsResponse.data);
+      
+      console.log("Processed users:", processedUsers);
     } catch (error) {
       console.error("Error fetching data:", error);
       
@@ -79,9 +94,8 @@ const UserManagement = () => {
       // Call the API to add a new user
       await axios.post("http://localhost:8080/addUser", newUser);
       
-      // Refresh the user list to get the updated data
-      const updatedUsersResponse = await axios.get("http://localhost:8080/getAllUsers");
-      setUsers(updatedUsersResponse.data);
+      // Refresh the data
+      await fetchAllData();
       
       // Show success toast
       const fullName = `${newUser.firstName} ${newUser.lastName}`;
@@ -327,21 +341,21 @@ const UserManagement = () => {
                   {users.map((user) => (
                     <TableRow key={user.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">
-                        {user.firstName || 'Unknown'}
+                        {`${user.firstName} ${user.lastName}`.trim() || 'Unknown'}
                       </TableCell>
                       <TableCell className="text-gray-500">{user.email}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs ${
-                          user.role === 'Admin' || user.role_name === 'Admin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'Editor' || user.role_name === 'Editor' ? 'bg-blue-100 text-blue-800' :
+                          user.role === 'Admin' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'Editor' ? 'bg-blue-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.role || user.role_name || 'N/A'}
+                          {user.role || 'N/A'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${getTeamColor(user.team || user.team_name)}`}>
-                          {user.team || user.team_name || 'No Team'}
+                        <span className={`px-2 py-1 rounded-full text-xs ${getTeamColor(user.team)}`}>
+                          {user.team || 'No Team'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
