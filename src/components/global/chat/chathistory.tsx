@@ -143,12 +143,12 @@ const ChatHistory = () => {
 
   return (
     <div>
-      <button className="flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10">
+      <button className="flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10 overflow-hidden min-w-[180px]">
         <div className="flex items-center gap-2">
           <BarChart className="w-4 h-4" />
           <span className="font-medium">Chat</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
           <button 
             onClick={handleManualRefresh}
             className="p-1 hover:bg-white/20 rounded-full"
