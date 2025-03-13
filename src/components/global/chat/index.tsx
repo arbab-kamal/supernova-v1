@@ -13,10 +13,10 @@ import { selectChatId, selectResetFlag } from "@/store/chatSlice";
 import { 
   selectChatHistory, 
   selectHistoryLoading,
+  selectConversationMessages,
+  selectHasFetchedHistory, // new selector from history slice
   clearHistory,
   fetchChatHistory,
-  selectConversationMessages,
-  selectHasFetchedHistory,
 } from "@/store/historySlice";
 
 interface Message {
@@ -42,6 +42,7 @@ const Chatbox = () => {
   const chatHistory = useSelector(selectChatHistory);
   const historyLoading = useSelector(selectHistoryLoading);
   const conversationMessages = useSelector(selectConversationMessages);
+  const hasFetchedHistory = useSelector(selectHasFetchedHistory); // new flag selector
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Function to get project name - robust method to handle different formats
@@ -95,57 +96,12 @@ const Chatbox = () => {
 
   // Immediately detect first-time users when component mounts
   useEffect(() => {
-    // For first time users (no chatId), immediately set isFirstLoad to false
+    // If no chatId, this is a new user, so skip the first load spinner
     if (!chatId) {
-      setIsFirstLoad(false);
-      return;
-    }
-    
-    // If history has been fetched and chatHistory is empty, stop further fetches
-    if (chatId && hasFetchedHistory && chatHistory.length === 0) {
-      setIsFirstLoad(false);
-      return;
-    }
-    
-    // If we have a chat ID but chatHistory is empty and not loading, fetch chat history
-    if (chatId && chatHistory.length === 0 && !historyLoading) {
-      dispatch(fetchChatHistory({ 
-        chatId: chatId, 
-        projectName: getProjectName() 
-      }));
-    } else if (conversationMessages && conversationMessages.length > 0) {
-      setMessages(conversationMessages);
+      console.log("No chatId - first time user detected");
       setIsFirstLoad(false);
     }
-    
-    // Final safeguard: if history loading completes, update firstLoad state
-    if (!historyLoading && isFirstLoad) {
-      setIsFirstLoad(false);
-    }
-  }, [
-    chatId, 
-    chatHistory, 
-    conversationMessages, 
-    historyLoading, 
-    selectHasFetchedHistory, // include our new flag here
-    dispatch, 
-    getProjectName, 
-    isFirstLoad
-  ]);
-  
-    // If we have conversation messages, update the UI
-    else if (conversationMessages && conversationMessages.length > 0) {
-      console.log(`Setting ${conversationMessages.length} messages from conversation`);
-      setMessages(conversationMessages);
-      setIsFirstLoad(false); // History loaded, not first load anymore
-    }
-    
-    // Final safeguard: if history loading completes, update firstLoad state
-    if (!historyLoading && isFirstLoad) {
-      setIsFirstLoad(false);
-    }
-  }, [chatId, chatHistory, conversationMessages, historyLoading, dispatch, getProjectName, isFirstLoad]);
-  
+  }, [chatId]);
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -207,9 +163,10 @@ const Chatbox = () => {
       historyLoading,
       chatHistory: chatHistory?.length || 0,
       messages: messages?.length || 0,
-      conversationMessages: conversationMessages?.length || 0
+      conversationMessages: conversationMessages?.length || 0,
+      hasFetchedHistory,
     });
-  }, [chatId, isFirstLoad, historyLoading, chatHistory, messages, conversationMessages]);
+  }, [chatId, isFirstLoad, historyLoading, chatHistory, messages, conversationMessages, hasFetchedHistory]);
 
   // Load chat history when chatId changes or when history is loaded
   useEffect(() => {
@@ -219,26 +176,40 @@ const Chatbox = () => {
       return;
     }
     
-    // If we have a chat ID but no conversation messages, fetch the chat history
-    if (chatId && chatHistory.length === 0 && !historyLoading) {
+    // If history has been fetched and chatHistory is empty or null, stop further fetches
+    if (chatId && hasFetchedHistory && (!chatHistory || chatHistory.length === 0)) {
+      console.log("History fetched, but no records exist.");
+      setIsFirstLoad(false);
+      return;
+    }
+    
+    // If we have a chat ID but chatHistory is empty and not loading, fetch chat history
+    if (chatId && (!chatHistory || chatHistory.length === 0) && !historyLoading) {
       console.log(`Fetching chat history for chatId ${chatId}`);
       dispatch(fetchChatHistory({ 
         chatId: chatId, 
         projectName: getProjectName() 
       }));
-    }
-    // If we have conversation messages, update the UI
-    else if (conversationMessages && conversationMessages.length > 0) {
+    } else if (conversationMessages && conversationMessages.length > 0) {
       console.log(`Setting ${conversationMessages.length} messages from conversation`);
       setMessages(conversationMessages);
       setIsFirstLoad(false); // History loaded, not first load anymore
     }
     
-    // If history loading completes, update firstLoad state
+    // Final safeguard: if history loading completes, update firstLoad state
     if (!historyLoading && isFirstLoad) {
       setIsFirstLoad(false);
     }
-  }, [chatId, chatHistory, conversationMessages, historyLoading, dispatch, getProjectName, isFirstLoad]);
+  }, [
+    chatId, 
+    chatHistory, 
+    conversationMessages, 
+    historyLoading, 
+    hasFetchedHistory,
+    dispatch, 
+    getProjectName, 
+    isFirstLoad
+  ]);
 
   // Clean up history data when component unmounts
   useEffect(() => {
