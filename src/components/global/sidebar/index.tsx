@@ -340,7 +340,7 @@ const Sidebar = () => {
           <button className="flex items-center justify-between w-full mb-2 p-2 rounded-md hover:bg-white/10">
             <div className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
-              <span className="font-medium">Chat Count</span>
+              <span className="font-medium">Chat</span>
             </div>
             <div className="flex items-center gap-1">
               <button 
@@ -385,7 +385,7 @@ const Sidebar = () => {
                   >
                     <div className="flex items-center gap-2">
                       <MessageSquare className="w-4 h-4" />
-                      <span className="font-medium">Chat {index + 1}</span>
+                      <span className="font-medium"> {index + 1}</span>
                     </div>
                     <div className="bg-blue-500 px-2 py-1 rounded-full text-xs font-bold">
                       {count}
