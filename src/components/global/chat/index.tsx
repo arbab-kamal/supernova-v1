@@ -16,6 +16,7 @@ import {
   clearHistory,
   fetchChatHistory,
   selectConversationMessages,
+  selectHasFetchedHistory,
 } from "@/store/historySlice";
 
 interface Message {
@@ -96,28 +97,42 @@ const Chatbox = () => {
   useEffect(() => {
     // For first time users (no chatId), immediately set isFirstLoad to false
     if (!chatId) {
-      console.log("No chatId - first time user detected");
-      setIsFirstLoad(false);
-      return;
-    }
-  
-    // If backend returns a null history and we're not loading, exit the loop
-    if (chatId && !historyLoading && chatHistory === null) {
-      console.log("Backend returned null history. Exiting loading loop.");
       setIsFirstLoad(false);
       return;
     }
     
-    // If we have a chat ID but chatHistory is an empty array and not loading, fetch chat history
-    if (chatId && chatHistory !== null && chatHistory.length === 0 && !historyLoading) {
-      console.log(`Fetching chat history for chatId ${chatId}`);
-      dispatch(
-        fetchChatHistory({ 
-          chatId: chatId, 
-          projectName: getProjectName() 
-        })
-      );
+    // If history has been fetched and chatHistory is empty, stop further fetches
+    if (chatId && hasFetchedHistory && chatHistory.length === 0) {
+      setIsFirstLoad(false);
+      return;
     }
+    
+    // If we have a chat ID but chatHistory is empty and not loading, fetch chat history
+    if (chatId && chatHistory.length === 0 && !historyLoading) {
+      dispatch(fetchChatHistory({ 
+        chatId: chatId, 
+        projectName: getProjectName() 
+      }));
+    } else if (conversationMessages && conversationMessages.length > 0) {
+      setMessages(conversationMessages);
+      setIsFirstLoad(false);
+    }
+    
+    // Final safeguard: if history loading completes, update firstLoad state
+    if (!historyLoading && isFirstLoad) {
+      setIsFirstLoad(false);
+    }
+  }, [
+    chatId, 
+    chatHistory, 
+    conversationMessages, 
+    historyLoading, 
+    selectHasFetchedHistory, // include our new flag here
+    dispatch, 
+    getProjectName, 
+    isFirstLoad
+  ]);
+  
     // If we have conversation messages, update the UI
     else if (conversationMessages && conversationMessages.length > 0) {
       console.log(`Setting ${conversationMessages.length} messages from conversation`);

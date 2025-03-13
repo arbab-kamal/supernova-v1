@@ -9,6 +9,7 @@ const initialState = {
   error: null,
   currentChatId: null,
   currentProjectName: null,
+  hasFetchedHistory: false, // <-- added flag
 };
 
 export const fetchChatHistory = createAsyncThunk(
@@ -22,16 +23,12 @@ export const fetchChatHistory = createAsyncThunk(
       });
       
       // Transform the data to match the expected format for messages
-      // Each item in the response has both question and reply
       const messages = [];
       response.data.forEach(item => {
-        // Add the user message
         messages.push({
           text: item.question,
           sender: 'user'
         });
-        
-        // Add the AI reply
         messages.push({
           text: item.reply,
           sender: 'ai'
@@ -39,8 +36,8 @@ export const fetchChatHistory = createAsyncThunk(
       });
       
       return { 
-        data: response.data,  // Keep original data for reference
-        messages: messages,   // Add transformed messages
+        data: response.data,
+        messages: messages,
         chatId, 
         projectName 
       };
@@ -60,7 +57,6 @@ export const fetchConversationById = createAsyncThunk(
         withCredentials: true,
       });
       
-      // Transform the conversation data into a format that matches your Message interface
       const messages = response.data.map(item => ({
         text: item.isUser ? item.question : item.reply,
         sender: item.isUser ? 'user' : 'ai'
@@ -79,6 +75,7 @@ export const historySlice = createSlice({
   reducers: {
     clearHistory: (state) => {
       state.chatHistory = [];
+      state.hasFetchedHistory = false; // reset the flag if needed
     },
     clearConversation: (state) => {
       state.conversationMessages = [];
@@ -88,15 +85,12 @@ export const historySlice = createSlice({
       state.currentProjectName = action.payload.projectName;
     },
     addToHistory: (state, action) => {
-      // Add a new chat to history if it doesn't exist
       const existingIndex = state.chatHistory.findIndex(
         chat => chat.id === action.payload.id
       );
-      
       if (existingIndex === -1) {
-        state.chatHistory.unshift(action.payload); // Add to beginning of array
+        state.chatHistory.unshift(action.payload);
       } else {
-        // Update existing chat
         state.chatHistory[existingIndex] = {
           ...state.chatHistory[existingIndex],
           ...action.payload
@@ -119,14 +113,16 @@ export const historySlice = createSlice({
       })
       .addCase(fetchChatHistory.fulfilled, (state, action) => {
         state.chatHistory = action.payload.data;
-        state.conversationMessages = action.payload.messages; // Store the transformed messages
+        state.conversationMessages = action.payload.messages;
         state.currentChatId = action.payload.chatId;
         state.currentProjectName = action.payload.projectName;
         state.loading = false;
+        state.hasFetchedHistory = true; // mark as fetched even if empty
       })
       .addCase(fetchChatHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.hasFetchedHistory = true; // mark as fetched to prevent re-dispatch
       })
       .addCase(fetchConversationById.pending, (state) => {
         state.conversationLoading = true;
@@ -139,7 +135,7 @@ export const historySlice = createSlice({
       .addCase(fetchConversationById.rejected, (state, action) => {
         state.conversationLoading = false;
         state.error = action.payload;
-      })
+      });
   },
 });
 
@@ -159,5 +155,6 @@ export const selectConversationLoading = (state) => state.history.conversationLo
 export const selectHistoryError = (state) => state.history.error;
 export const selectCurrentChatId = (state) => state.history.currentChatId;
 export const selectCurrentProjectName = (state) => state.history.currentProjectName;
+export const selectHasFetchedHistory = (state) => state.history.hasFetchedHistory;
 
 export default historySlice.reducer;
