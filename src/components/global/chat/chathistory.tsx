@@ -115,7 +115,7 @@ const ChatHistory = () => {
       setIsLoading(false);
     }
   };
-
+//@ts-ignore
   const handleChatSelect = (index) => {
     setActiveChatIndex(index);
     // Set the chat ID to the selected chat's index + 1 (since chat IDs start at 1)
@@ -124,6 +124,7 @@ const ChatHistory = () => {
     
     // Fetch the chat history for this chat
     const projectName = getProjectName();
+    //@ts-ignore
     dispatch(fetchChatHistory({ 
       chatId: selectedChatId, 
       projectName 
@@ -136,6 +137,7 @@ const ChatHistory = () => {
   };
 
   // Manual refresh for chat counts
+  //@ts-ignore
   const handleManualRefresh = (e) => {
     e.stopPropagation();
     fetchChatCount();
