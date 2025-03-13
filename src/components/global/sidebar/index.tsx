@@ -57,19 +57,15 @@ const Sidebar = () => {
     // Increment the currentChatId by one
     const newChatId = currentChatId + 1;
     setCurrentChatId(newChatId);
-
-    // Dispatch the new chat action with the newChatId (adjust your Redux slice if needed)
+  
+    // Dispatch the new chat action with the newChatId
     dispatch(startNewChat(newChatId));
-
-    // Append a new chat to the count list (starting at 0 messages)
-    const updatedChatCountList = [...chatCountList, 0];
-    setChatCountList(updatedChatCountList);
-
-    // Mark the new chat as the active one by saving its index (last in array)
-    setActiveChatIndex(updatedChatCountList.length - 1);
-
+  
+    // Mark the new chat as active
+    setActiveChatIndex(chatCountList.length); // This will be the index of the new chat after it's added
+  
     // Navigate to the chat page
-    router.push('/chat');
+    router.push('/chat')
   };
 
   // A robust method to retrieve the project name from the selected project
@@ -160,30 +156,24 @@ const Sidebar = () => {
 
   // Sync with backend periodically (every 5 seconds)
   useEffect(() => {
-    const syncWithBackend = async () => {
-      if (!selectedProject) return;
-      try {
-        const projectName = getProjectName();
-        const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        const response = await axios.get(`${baseURL}/chatCount`, {
-          params: { projectName },
-          withCredentials: true,
-        });
-        if (Array.isArray(response.data)) {
-          const backendCounts = response.data.map(count => Number(count) || 0);
-          // If the new chat is not yet in the backend, keep its current count locally
-          if (activeChatIndex !== null && backendCounts.length < chatCountList.length) {
-            const mergedCounts = [...backendCounts];
-            mergedCounts[chatCountList.length - 1] = chatCountList[chatCountList.length - 1];
-            setChatCountList(mergedCounts);
-          } else {
-            setChatCountList(backendCounts);
-          }
-        }
-      } catch (err) {
-        console.error("Error syncing with backend:", err);
-      }
-    };
+    // Replace the existing syncWithBackend function with this:
+const syncWithBackend = async () => {
+  if (!selectedProject) return;
+  try {
+    const projectName = getProjectName();
+    const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+    const response = await axios.get(`${baseURL}/chatCount`, {
+      params: { projectName },
+      withCredentials: true,
+    });
+    if (Array.isArray(response.data)) {
+      // Simply use the backend data directly
+      setChatCountList(response.data.map(count => Number(count) || 0));
+    }
+  } catch (err) {
+    console.error("Error syncing with backend:", err);
+  }
+};
     const intervalId = setInterval(syncWithBackend, 5000);
     return () => clearInterval(intervalId);
   }, [selectedProject, activeChatIndex, chatCountList]);
