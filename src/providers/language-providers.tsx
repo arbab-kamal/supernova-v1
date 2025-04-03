@@ -1,11 +1,15 @@
-// First, let's create a language context to share the state between components
-// src/contexts/LanguageContext.js
+// File: /providers/language-providers.js
 "use client";
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
-const LanguageContext = createContext();
+// Create the language context
+const LanguageContext = createContext({
+  language: 'english',
+  setLanguage: () => {},
+});
 
-export const LanguageProvider = ({ children }) => {
+// Create a provider component
+export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState('english');
 
   return (
@@ -13,13 +17,13 @@ export const LanguageProvider = ({ children }) => {
       {children}
     </LanguageContext.Provider>
   );
-};
+}
 
-export const useLanguage = () => useContext(LanguageContext);
-
-// Then modify your ArticleNavbar component to use the context:
-// Update to the handleLanguageChange function in ArticleNavbar
-const handleLanguageChange = (selectedLanguage) => {
-  setLanguage(selectedLanguage.toLowerCase());
-  console.log(`Language changed to: ${selectedLanguage}`);
-};
+// Create a custom hook to use the language context
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+}

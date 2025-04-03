@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import {
   Moon,
   Menu,
@@ -24,58 +24,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import BookmarkModal from "./bookmark";
-import ProjectModal from "./project";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/providers/language-providers"; // Import our custom hook
 
 const ArticleNavbar = () => {
   const { setTheme, theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
   const currentProject = useSelector(selectCurrentProject);
-  // Add state to track selected language
-  const [language, setLanguage] = useState("english");
-
-  // Modified fetchAIResponse function to use language-specific endpoint
-  const fetchAIResponse = async (query) => {
-    setIsLoading(true);
-    try {
-      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-      const projectName = getProjectName();
-      
-      // Use language-specific endpoint
-      const endpoint = language === "arabic" ? "/rag-arabic" : "/rag";
-      
-      console.log(`Sending request to ${endpoint}: query=${query}, chatId=${chatId}, projectName=${projectName}, language=${language}`);
-      
-      const response = await axios.get(`${baseURL}${endpoint}`, {
-        params: {
-          query,
-          chatId,
-          projectName
-        },
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching ${language} RAG response:`, error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error(`Server responded with ${error.response.status}: ${JSON.stringify(error.response.data)}`);
-        return `Error: ${error.response.status} - Please try again or check your input.`;
-      }
-      return "Sorry, I couldn't process your request. Please try again.";
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  
+  // Use the language context instead of local state
+  const { language, setLanguage } = useLanguage();
 
   // Handle language change
   const handleLanguageChange = (selectedLanguage) => {
     setLanguage(selectedLanguage.toLowerCase());
-    console.log(`Language changed to: ${selectedLanguage}`);
+    console.log(`Language changed to: ${selectedLanguage.toLowerCase()}`);
   };
 
   return (
@@ -125,10 +90,10 @@ const ArticleNavbar = () => {
               <span>{language === "arabic" ? "العربية" : "English"}</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32">
-              <DropdownMenuItem onClick={() => handleLanguageChange("English")}>
+              <DropdownMenuItem onClick={() => handleLanguageChange("english")}>
                 🇬🇧 English
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleLanguageChange("Arabic")}>
+              <DropdownMenuItem onClick={() => handleLanguageChange("arabic")}>
                 🇸🇦 العربية
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -141,11 +106,19 @@ const ArticleNavbar = () => {
           {currentProject && (
             <div className="flex items-center mr-2 border-r pr-3" style={{ borderColor: colors.border }}>
               <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center text-blue-600 mr-2">
-                {currentProject.title.charAt(0).toUpperCase()}
+                {typeof currentProject === 'object' && currentProject.title 
+                  ? currentProject.title.charAt(0).toUpperCase()
+                  : typeof currentProject === 'string' 
+                    ? currentProject.charAt(0).toUpperCase()
+                    : "P"}
               </div>
               <div>
                 <h3 className="font-medium" style={{ color: colors.text.primary }}>
-                  {currentProject.title}
+                  {typeof currentProject === 'object' && currentProject.title 
+                    ? currentProject.title
+                    : typeof currentProject === 'string' 
+                      ? currentProject
+                      : "Project"}
                 </h3>
                 <p className="text-xs" style={{ color: colors.text.secondary }}>
                   Project
@@ -155,12 +128,11 @@ const ArticleNavbar = () => {
           )}
           
           <BookmarkModal 
-            projectInfo={currentProject ? {
+            projectInfo={currentProject && typeof currentProject === 'object' ? {
               id: currentProject.id,
               title: currentProject.title
             } : null}
           />
-          {/* <ProjectModal /> */}
 
           {/* Theme Selector */}
           <DropdownMenu>
