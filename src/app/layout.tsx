@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 // import { ThemeProvider } from "@/providers/theme-provider";
 import Providers from "@/providers/reduxprovider"; // Adjust the import path accordingly
+import { LanguageProvider } from "@/providers/language-providers";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -32,8 +33,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           > */}
+          <LanguageProvider>
           {children}
           <Toaster />
+          </LanguageProvider>
           {/* </ThemeProvider> */}
         </Providers>
       </body>

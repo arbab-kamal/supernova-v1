@@ -18,7 +18,7 @@ import {
   clearHistory,
   fetchChatHistory,
 } from "@/store/historySlice";
-
+import { useLanguage } from "@/providers/language-providers"; // Import the language context
 interface Message {
   text: string;
   sender: "user" | "ai";
@@ -44,7 +44,7 @@ const Chatbox = () => {
   const conversationMessages = useSelector(selectConversationMessages);
   const hasFetchedHistory = useSelector(selectHasFetchedHistory); // new flag selector
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const { language } = useLanguage();
   // Function to get project name - robust method to handle different formats
   const getProjectName = useCallback(() => {
     // Handle string case
@@ -233,9 +233,12 @@ const Chatbox = () => {
       // Get project name using the robust method
       const projectName = getProjectName();
       
-      console.log(`Sending request: query=${query}, chatId=${chatId}, projectName=${projectName}`);
+      // Use language-specific endpoint
+      const endpoint = language === "arabic" ? "/rag-arabic" : "/rag";
       
-      const response = await axios.get(`${baseURL}/rag`, {
+      console.log(`Sending request to ${endpoint}: query=${query}, chatId=${chatId}, projectName=${projectName}, language=${language}`);
+      
+      const response = await axios.get(`${baseURL}${endpoint}`, {
         params: {
           query,
           chatId,
@@ -248,7 +251,7 @@ const Chatbox = () => {
 
       return response.data;
     } catch (error) {
-      console.error("Error fetching RAG response:", error);
+      console.error(`Error fetching ${language} RAG response:`, error);
       if (axios.isAxiosError(error) && error.response) {
         console.error(`Server responded with ${error.response.status}: ${JSON.stringify(error.response.data)}`);
         return `Error: ${error.response.status} - Please try again or check your input.`;
