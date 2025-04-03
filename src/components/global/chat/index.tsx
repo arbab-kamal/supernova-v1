@@ -165,8 +165,9 @@ const Chatbox = () => {
       messages: messages?.length || 0,
       conversationMessages: conversationMessages?.length || 0,
       hasFetchedHistory,
+      currentLanguage: language, // Log current language for debugging
     });
-  }, [chatId, isFirstLoad, historyLoading, chatHistory, messages, conversationMessages, hasFetchedHistory]);
+  }, [chatId, isFirstLoad, historyLoading, chatHistory, messages, conversationMessages, hasFetchedHistory, language]);
 
   // Load chat history when chatId changes or when history is loaded
   useEffect(() => {
@@ -249,6 +250,7 @@ const Chatbox = () => {
         }
       });
 
+      console.log(`Received response from ${endpoint}:`, response.data);
       return response.data;
     } catch (error) {
       console.error(`Error fetching ${language} RAG response:`, error);
@@ -271,6 +273,9 @@ const Chatbox = () => {
       setInputValue("");
 
       try {
+        // Log current language before making request
+        console.log(`Submitting with current language: ${language}`);
+        
         const aiResponse = await fetchAIResponse(inputValue);
         const aiMessage = { text: aiResponse || "No response received", sender: "ai" };
         //@ts-ignore
@@ -402,7 +407,7 @@ const Chatbox = () => {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask me anything..."
+              placeholder={language === "arabic" ? "اسألني أي شيء..." : "Ask me anything..."}
               className="flex-1 px-4 py-2.5 border rounded-full focus:outline-none focus:ring-2"
               style={{ 
                 backgroundColor: colors.input.bg,
