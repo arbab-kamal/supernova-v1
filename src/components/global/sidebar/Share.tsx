@@ -39,17 +39,16 @@ export default function ShareNotes({
 
   const currentProject = useSelector(selectCurrentProject)
   
-  // Handle different formats of currentProject (object with title, object with name, or string)
+  // Handle different formats of currentProject
   const projectName = 
     typeof currentProject === 'object' && currentProject !== null
-      ? currentProject.title || currentProject.name  // Try both title and name properties
+      ? currentProject.title || currentProject.name
       : typeof currentProject === 'string'
         ? currentProject
         : null;
   
   const canShare = Boolean(projectName)
   
-  // Debug logs - you can remove these after fixing the issue
   useEffect(() => {
     console.log("ShareNotes - Current Project:", currentProject)
     console.log("Project Name detected:", projectName)
@@ -70,7 +69,6 @@ export default function ShareNotes({
   }, [isOpen])
 
   const openModal = () => {
-    console.log("Opening modal, canShare:", canShare)
     if (onOpenChange) {
       onOpenChange(true);
     } else {
@@ -94,12 +92,9 @@ export default function ShareNotes({
     setShareError(null)
     setShareSuccess(null)
 
-    // Determine what to send as projectName based on the current project structure
-    const projectNameToShare = projectName;
-
     axios
       .post('http://localhost:8080/shareNotes', null, {
-        params: { projectName: projectNameToShare, receiverEmail: email },
+        params: { projectName, receiverEmail: email },
       })
       .then(() => setShareSuccess(`Notes shared with ${email}`))
       .catch(err =>
@@ -127,6 +122,7 @@ export default function ShareNotes({
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background border rounded-lg shadow-lg w-[600px] max-w-[90vw] max-h-[90vh] flex flex-col">
+            
             {/* Header */}
             <div className="flex justify-between items-center border-b p-4">
               <h2 className="text-xl font-semibold">
@@ -153,12 +149,8 @@ export default function ShareNotes({
                 <p className="py-4 text-gray-600">No users found to share with.</p>
               ) : (
                 <>
-                  {shareError && (
-                    <p className="mb-2 text-red-600">{shareError}</p>
-                  )}
-                  {shareSuccess && (
-                    <p className="mb-2 text-green-600">{shareSuccess}</p>
-                  )}
+                  {shareError && <p className="mb-2 text-red-600">{shareError}</p>}
+                  {shareSuccess && <p className="mb-2 text-green-600">{shareSuccess}</p>}
 
                   <Table>
                     <TableHeader>
@@ -170,16 +162,16 @@ export default function ShareNotes({
                     <TableBody>
                       {users.map(user => (
                         <TableRow key={user.id}>
-                          <TableCell>{user.email}</TableCell>
+                          <TableCell className="text-gray-900 dark:text-white">
+                            {user.email}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               size="sm"
                               disabled={sharingUserId === user.id}
                               onClick={() => shareTo(user.email, user.id)}
                             >
-                              {sharingUserId === user.id
-                                ? 'Sharing…'
-                                : 'Share'}
+                              {sharingUserId === user.id ? 'Sharing…' : 'Share'}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -192,7 +184,11 @@ export default function ShareNotes({
 
             {/* Footer */}
             <div className="border-t p-4 flex justify-end">
-              <Button variant="outline" onClick={closeModal}>
+              <Button
+                variant="outline"
+                onClick={closeModal}
+                className="hover:text-gray-900 hover:bg-gray-100"
+              >
                 Close
               </Button>
             </div>
