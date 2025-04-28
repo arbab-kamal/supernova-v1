@@ -90,9 +90,15 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
       }
 
       setNotes(parsedNotes);
-
-      // Keep textarea empty for new input (unchanged from original)
-      setNoteInput("");
+      
+      // If there are notes, populate the textarea with the most recent note
+      if (parsedNotes.length > 0) {
+        // Sort notes by timestamp if available, most recent first
+        const sortedNotes = [...parsedNotes].sort((a, b) => 
+          (b.timestamp || 0) - (a.timestamp || 0)
+        );
+        setNoteInput(sortedNotes[0].content);
+      }
     } catch (err) {
       console.error("Error fetching notes:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -118,29 +124,14 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
         }
       );
       
-      // Clear the input field after successful save
-      setNoteInput("");
+      // Don't clear the input field after saving, keep the content visible
       
-      // Refresh notes to show the updated list including the new note
+      // Refresh notes to update the state
       fetchNotes();
       
     } catch (err) {
       console.error("Error updating note:", err);
       setError("Failed to save note. Please try again.");
-    }
-  };
-
-  const handleDeleteNote = async (id: string) => {
-    try {
-      await axios.delete("http://localhost:8080/deleteNote", {
-        params: { projectName, noteId: id },
-      });
-      
-      // Refresh notes list after deletion
-      fetchNotes();
-    } catch (err) {
-      console.error("Error deleting note:", err);
-      setError("Failed to delete note. Please try again.");
     }
   };
 
@@ -171,51 +162,43 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
           </button>
         </div>
 
+        {/* Status indicator */}
+        {isLoading && (
+          <div className="p-2 bg-blue-50 text-blue-700 text-sm text-center">
+            Loading notes...
+          </div>
+        )}
+        {error && (
+          <div className="p-2 bg-red-50 text-red-700 text-sm text-center">
+            {error}
+          </div>
+        )}
+
         {/* Input */}
         <div className="p-4 border-b">
           <textarea
-            className="w-full border rounded-md p-2 h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-md p-2 h-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder={projectName ? "Write a note..." : "Select a project first..."}
             value={noteInput}
             onChange={(e) => setNoteInput(e.target.value)}
-            disabled={!projectName}
+            disabled={!projectName || isLoading}
           />
-          <button
-            onClick={handleSaveNote}
-            disabled={!canSaveNote}
-            className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
-          >
-            Save Note
-            {!projectName && <span className="ml-1 text-xs opacity-70">(No project selected)</span>}
-          </button>
-        </div>
-
-        {/* Notes List */}
-        <div className="overflow-auto h-[calc(100%-200px)]">
-          {!projectName ? (
-            <div className="p-4 text-gray-500 text-center">
-              Select a project to see notes.
-            </div>
-          ) : isLoading ? (
-            <div className="p-4 text-center">
-              <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-500">Loading notes...</p>
-            </div>
-          ) : error ? (
-            <div className="p-4 text-red-500 text-center">
-              {error}
-              <button
-                onClick={fetchNotes}
-                className="block mx-auto mt-2 text-blue-500 hover:underline"
-              >
-                Try again
-              </button>
-            </div>
-          ) : notes.length === 0 ? (
-            <div className="p-4 text-gray-500 text-center">
-              No notes yet. Add your first note above!
-            </div>
-          ) : ""}
+          <div className="flex justify-between items-center mt-2">
+            <button
+              onClick={handleSaveNote}
+              disabled={!canSaveNote || isLoading}
+              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+            >
+              Save Note
+              {!projectName && <span className="ml-1 text-xs opacity-70">(No project selected)</span>}
+            </button>
+            
+            {notes.length > 0 && (
+              <span className="text-xs text-gray-500">
+                {notes.length} note{notes.length !== 1 ? 's' : ''} available
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </>,
