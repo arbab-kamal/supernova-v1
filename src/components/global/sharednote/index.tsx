@@ -5,7 +5,6 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
-import { useSelector } from "react-redux";
 
 const SharedNoteDetail = ({ params }) => {
   const router = useRouter();
@@ -18,24 +17,11 @@ const SharedNoteDetail = ({ params }) => {
   const [sender, setSender] = useState("");
   const [readOnly, setReadOnly] = useState(true);
   
-  // Find the shared note from Redux store
-  const sharedNotes = useSelector((state) => state.notes.sharedNotes);
-  
   useEffect(() => {
     if (shareId) {
-      // First try to get from Redux store
-      const noteFromStore = sharedNotes.find(note => note.shareId === shareId);
-      
-      if (noteFromStore) {
-        setNoteContent(noteFromStore.notes);
-        setSender(noteFromStore.senderName);
-        setLoading(false);
-      } else {
-        // If not in store, fetch from API
-        fetchSharedNote();
-      }
+      fetchSharedNote();
     }
-  }, [shareId, sharedNotes]);
+  }, [shareId]);
   
   const fetchSharedNote = async () => {
     try {

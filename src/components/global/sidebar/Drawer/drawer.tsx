@@ -112,7 +112,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
     };
   
     try {
-      await axios.post(
+      await axios.put(
         "http://localhost:8080/updateNotes",
         { 
           note: newNote,
@@ -220,24 +220,8 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
             <div className="p-4 text-gray-500 text-center">
               No notes yet. Add your first note above!
             </div>
-          ) : (
-            Array.isArray(notes) && notes.map((note) => (
-              <div key={note.id} className="p-4 border-b hover:bg-gray-50">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-xs text-gray-500">
-                    {new Date(note.timestamp).toLocaleString()}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteNote(note.id)}
-                    className="text-red-500 hover:text-red-700 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-                <p className="text-sm">{note.content}</p>
-              </div>
-            ))
-          )}
+          ) : ""
+            }
         </div>
       </div>
     </>,
