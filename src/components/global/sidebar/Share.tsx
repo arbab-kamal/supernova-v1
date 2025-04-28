@@ -95,10 +95,11 @@ export default function ShareNotes({
         <Button
           variant="ghost"
           className={`flex-1 flex justify-start items-center text-white hover:bg-white/10 ${className}`}
-          
+          disabled={!canShare}
           onClick={openModal}
         >
           <Share2 className="w-4 h-4 mr-2 text-white" />
+          Share Notes
         </Button>
       )}
 
