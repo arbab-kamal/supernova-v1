@@ -218,7 +218,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
               No notes yet. Add your first note above!
             </div>
           ) : (
-            notes.map((note) => (
+            notes && notes.map((note) => (
               <div key={note.id} className="p-4 border-b hover:bg-gray-50">
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-xs text-gray-500">
