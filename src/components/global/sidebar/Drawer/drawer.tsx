@@ -91,7 +91,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
       setNotes(parsedNotes);
 
-      // Don't pre-fill textarea with most recent note - keep it empty for new input
+      // Keep textarea empty for new input (unchanged from original)
       setNoteInput("");
     } catch (err) {
       console.error("Error fetching notes:", err);
@@ -105,22 +105,16 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
     // only when there's text and a project
     if (!noteInput.trim() || !projectName) return;
   
-    const newNote: Note = {
-      id: Date.now().toString(),
-      content: noteInput,
-      timestamp: Date.now(),
-    };
-  
     try {
-      // Fixed parameter name from 'note' to 'notes' to match API expectation
+      // Send just the note content as a string in the query parameter
       await axios.put(
         "http://localhost:8080/updateNotes",
-        { 
-          notes: newNote,  // Changed from 'note' to 'notes'
-          projectName: projectName
-        },
+        null,  // No body needed
         {
-          headers: { "Content-Type": "application/json" }
+          params: {
+            notes: noteInput.trim(),  // Just sending the note content as a string
+            projectName: projectName
+          }
         }
       );
       
@@ -196,7 +190,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
           </button>
         </div>
 
-        {/* Notes List - Fixed the missing rendering code */}
+        {/* Notes List */}
         <div className="overflow-auto h-[calc(100%-200px)]">
           {!projectName ? (
             <div className="p-4 text-gray-500 text-center">
@@ -221,24 +215,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
             <div className="p-4 text-gray-500 text-center">
               No notes yet. Add your first note above!
             </div>
-          ) : (
-            <div className="p-4 space-y-3">
-              {notes.map((note) => (
-                <div key={note.id} className="bg-gray-50 p-3 rounded-md shadow-sm relative group">
-                  <p className="text-sm mb-1">{note.content}</p>
-                  <div className="text-xs text-gray-500">
-                    {new Date(note.timestamp).toLocaleString()}
-                  </div>
-                  <button 
-                    onClick={() => handleDeleteNote(note.id)}
-                    className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          ) : ""}
         </div>
       </div>
     </>,
