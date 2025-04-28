@@ -187,7 +187,7 @@ export default function ShareNotes({
               <Button
                 variant="outline"
                 onClick={closeModal}
-                className="hover:text-gray-900 hover:bg-gray-500"
+                className="hover:text-gray-900 hover:bg-gray-500 text-white bg-gray-600"
               >
                 Close
               </Button>
