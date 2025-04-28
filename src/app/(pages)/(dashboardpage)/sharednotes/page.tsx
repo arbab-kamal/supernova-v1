@@ -1,3 +1,4 @@
+"use client"
 import React from 'react'
 import SharedNoteDetail from '@/components/global/sharednote'
 import { useParams } from 'next/navigation'
