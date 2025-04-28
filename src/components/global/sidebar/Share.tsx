@@ -1,5 +1,4 @@
-// src/components/ShareNotes.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useState, HTMLAttributes, useEffect } from 'react'
 import axios from 'axios'
 import { useSelector } from 'react-redux'
 import { selectCurrentProject } from '@/store/projectSlice'
@@ -12,41 +11,66 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Share2 } from 'lucide-react'
+import { Share2, X } from 'lucide-react'
 
-export default function ShareNotes() {
-  const [open, setOpen] = useState(false)
+interface ShareNotesProps extends HTMLAttributes<HTMLElement> {
+  className?: string;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  showButton?: boolean;
+}
+
+export default function ShareNotes({ 
+  className = '', 
+  isOpen: controlledIsOpen, 
+  onOpenChange,
+  showButton = true
+}: ShareNotesProps) {
   const [users, setUsers] = useState<{ id: number; email: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sharingUserId, setSharingUserId] = useState<number | null>(null)
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+  
+  // Determine if modal is open based on props or internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
 
-  // ← pull your selectedProject out of Redux
   const currentProject = useSelector(selectCurrentProject)
-
-  // guard against no project selected
   const projectName = currentProject?.name
   const canShare = Boolean(projectName)
 
+  // Fetch users when modal opens
   useEffect(() => {
-    if (open) {
-      setLoading(true)
-      axios
-        .get('http://localhost:8080/getAllUsers')
-        .then(res => setUsers(res.data))
-        .catch(err => setError(err.message))
-        .finally(() => setLoading(false))
+    if (!isOpen) return
+    
+    setLoading(true)
+    setError(null)
+    axios
+      .get('http://localhost:8080/getAllUsers')
+      .then(res => setUsers(res.data))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [isOpen])
+
+  const openModal = () => {
+    if (onOpenChange) {
+      onOpenChange(true);
+    } else {
+      setInternalIsOpen(true);
     }
-  }, [open])
+  }
+
+  const closeModal = () => {
+    if (onOpenChange) {
+      onOpenChange(false);
+    } else {
+      setInternalIsOpen(false);
+    }
+    setShareError(null)
+    setShareSuccess(null)
+  }
 
   const shareTo = (email: string, userId: number) => {
     if (!projectName) return
@@ -56,96 +80,102 @@ export default function ShareNotes() {
 
     axios
       .post('http://localhost:8080/shareNotes', null, {
-        params: {
-          projectName,
-          receiverEmail: email,
-        },
+        params: { projectName, receiverEmail: email },
       })
-      .then(() => {
-        setShareSuccess(`Notes shared with ${email}`)
-      })
-      .catch(err => {
+      .then(() => setShareSuccess(`Notes shared with ${email}`))
+      .catch(err =>
         setShareError(err.response?.data?.message || err.message)
-      })
-      .finally(() => {
-        setSharingUserId(null)
-      })
+      )
+      .finally(() => setSharingUserId(null))
   }
 
   return (
     <>
-      <Button
-        variant="ghost"
-        onClick={() => setOpen(true)}
-        className="w-full flex justify-start items-center text-white hover:bg-white/10"
-        disabled={!canShare}
-      >
-        <Share2 className="w-4 h-4 text-white" />
-      </Button>
+      {showButton && (
+        <Button
+          variant="ghost"
+          className={`flex-1 flex justify-start items-center text-white hover:bg-white/10 ${className}`}
+          
+          onClick={openModal}
+        >
+          <Share2 className="w-4 h-4 mr-2 text-white" />
+        </Button>
+      )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {projectName
-                ? `Share “${projectName}” Notes`
-                : 'No Project Selected'}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Custom Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background border rounded-lg shadow-lg w-[600px] max-w-[90vw] max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b p-4">
+              <h2 className="text-xl font-semibold">
+                {projectName
+                  ? `Share "${projectName}" Notes`
+                  : 'No Project Selected'}
+              </h2>
+              <Button variant="ghost" size="sm" onClick={closeModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-          {!canShare ? (
-            <p className="text-red-600 px-6 py-4">
-              You need to select a project before sharing.
-            </p>
-          ) : loading ? (
-            <div className="flex justify-center py-10">Loading…</div>
-          ) : error ? (
-            <p className="text-red-600 px-6">{error}</p>
-          ) : (
-            <>
-              {shareError && (
-                <p className="text-red-600 mb-2 px-6">{shareError}</p>
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4">
+              {!canShare ? (
+                <p className="py-4 text-red-600">
+                  Please select a project before sharing.
+                </p>
+              ) : loading ? (
+                <div className="flex justify-center py-10">Loading…</div>
+              ) : error ? (
+                <p className="text-red-600">Error: {error}</p>
+              ) : (
+                <>
+                  {shareError && (
+                    <p className="mb-2 text-red-600">{shareError}</p>
+                  )}
+                  {shareSuccess && (
+                    <p className="mb-2 text-green-600">{shareSuccess}</p>
+                  )}
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map(user => (
+                        <TableRow key={user.id}>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              disabled={sharingUserId === user.id}
+                              onClick={() => shareTo(user.email, user.id)}
+                            >
+                              {sharingUserId === user.id
+                                ? 'Sharing…'
+                                : 'Share'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               )}
-              {shareSuccess && (
-                <p className="text-green-600 mb-2 px-6">{shareSuccess}</p>
-              )}
+            </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          disabled={sharingUserId === user.id}
-                          onClick={() => shareTo(user.email, user.id)}
-                        >
-                          {sharingUserId === user.id
-                            ? 'Sharing…'
-                            : 'Share'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* Footer */}
+            <div className="border-t p-4 flex justify-end">
+              <Button variant="outline" onClick={closeModal}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
