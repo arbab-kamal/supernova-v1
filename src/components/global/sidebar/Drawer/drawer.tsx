@@ -139,7 +139,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
 
     try {
-      await axios.delete("/deleteNote", {
+      await axios.delete("http://localhost:8080/deleteNote", {
         params: { projectName, noteId: id },
       });
     } catch (err) {
@@ -227,12 +227,12 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
                   <span className="text-xs text-gray-500">
                     {new Date(note.timestamp).toLocaleString()}
                   </span>
-                  <button
+                  {/* <button
                     onClick={() => handleDeleteNote(note.id)}
                     className="text-red-500 hover:text-red-700 text-sm"
                   >
                     Delete
-                  </button>
+                  </button> */}
                 </div>
                 <p className="text-sm">{note.content}</p>
               </div>
