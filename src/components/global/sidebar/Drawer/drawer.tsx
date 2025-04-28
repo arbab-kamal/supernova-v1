@@ -105,26 +105,27 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
   const handleSaveNote = async () => {
     // only when there's text and a project
     if (!noteInput.trim() || !projectName) return;
-
+  
     const newNote: Note = {
       id: Date.now().toString(),
       content: noteInput,
       timestamp: Date.now(),
     };
-
+  
     // Optimistic UI update
     setNotes((prev) => [newNote, ...prev]);
     setNoteInput("");
-
+  
     try {
       await axios.put(
         "http://localhost:8080/updateNotes",
+        null,  // No request body
         {
-          projectName,
-          note: newNote,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
+          params: {  // Use params for query parameters
+            notes: JSON.stringify(newNote),
+            projectName: projectName
+          },
+          headers: { "Content-Type": "application/json" }
         }
       );
     } catch (err) {
@@ -134,7 +135,6 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
       setError("Failed to save note. Please try again.");
     }
   };
-
   const handleDeleteNote = async (id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
 
