@@ -207,6 +207,12 @@ const syncWithBackend = async () => {
       label: "Project",
       href: "/project",
     },
+    {
+      id: "Shared Notes",
+      icon: FolderGit2,
+      label: "Shared Notes",
+      href: "/sharednotes",
+    },
   ];
 
   // For truncating long text (if needed)

@@ -88,12 +88,8 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
       setNotes(parsedNotes);
 
-      // Pre-fill textarea with most recent note
-      if (parsedNotes.length > 0) {
-        setNoteInput(parsedNotes[0].content);
-      } else {
-        setNoteInput("");
-      }
+      // Don't pre-fill textarea with most recent note - keep it empty for new input
+      setNoteInput("");
     } catch (err) {
       console.error("Error fetching notes:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -112,39 +108,40 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
       timestamp: Date.now(),
     };
   
-    // Optimistic UI update
-    setNotes((prev) => [newNote, ...prev]);
-    setNoteInput("");
-  
     try {
-      await axios.put(
+      await axios.post(
         "http://localhost:8080/updateNotes",
-        null,  // No request body
+        { 
+          note: newNote,
+          projectName: projectName
+        },
         {
-          params: {  // Use params for query parameters
-            notes: JSON.stringify(newNote),
-            projectName: projectName
-          },
           headers: { "Content-Type": "application/json" }
         }
       );
+      
+      // Clear the input field after successful save
+      setNoteInput("");
+      
+      // Refresh notes to show the updated list including the new note
+      fetchNotes();
+      
     } catch (err) {
       console.error("Error updating note:", err);
-      // rollback on failure
-      setNotes((prev) => prev.filter((n) => n.id !== newNote.id));
       setError("Failed to save note. Please try again.");
     }
   };
-  const handleDeleteNote = async (id: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
 
+  const handleDeleteNote = async (id: string) => {
     try {
       await axios.delete("http://localhost:8080/deleteNote", {
         params: { projectName, noteId: id },
       });
+      
+      // Refresh notes list after deletion
+      fetchNotes();
     } catch (err) {
       console.error("Error deleting note:", err);
-      fetchNotes();
       setError("Failed to delete note. Please try again.");
     }
   };
@@ -227,12 +224,12 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
                   <span className="text-xs text-gray-500">
                     {new Date(note.timestamp).toLocaleString()}
                   </span>
-                  {/* <button
+                  <button
                     onClick={() => handleDeleteNote(note.id)}
                     className="text-red-500 hover:text-red-700 text-sm"
                   >
                     Delete
-                  </button> */}
+                  </button>
                 </div>
                 <p className="text-sm">{note.content}</p>
               </div>
