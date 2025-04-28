@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, PlusCircle, User } from "lucide-react";
+import { LogOut, Notebook, PlusCircle, Share, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +30,11 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
+import Drawer from "./Drawer/drawer";
+import ShareNotes from "./Share";
 
 const Sidebar = () => {
+  const [notesOpen, setNotesOpen] = useState(false);
   // Local state for toggling sections, username and loading indicator
   const [isPromptOpen, setIsPromptOpen] = useState(true);
   const [isChatCountOpen, setIsChatCountOpen] = useState(true);
@@ -203,12 +206,6 @@ const syncWithBackend = async () => {
       icon: FolderGit2,
       label: "Project",
       href: "/project",
-    },
-    {
-      id: "bookmark",
-      icon: Bookmark,
-      label: "Bookmark",
-      href: "/chat/bookmark",
     },
   ];
 
@@ -409,6 +406,22 @@ const syncWithBackend = async () => {
             </Link>
           );
         })}
+        <div className="w-full flex space-x-4">
+      {/* Notes button */}
+      <Button
+        variant="ghost"
+        onClick={() => setNotesOpen(true)}
+        className="flex-1 flex justify-start items-center text-white hover:bg-white/10"
+      >
+        <Notebook className="w-4 h-4 mr-2 text-white" />
+        <span>Notes</span>
+      </Button>
+
+      {/* Share button + modal */}
+      <ShareNotes className="flex-1" />
+    </div>
+
+
         <Separator className="my-2 bg-white/20" />
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 p-2 hover:bg-white/10 rounded-lg cursor-pointer w-full">
@@ -435,6 +448,10 @@ const syncWithBackend = async () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <Drawer 
+        open={notesOpen} 
+        onClose={() => setNotesOpen(false)} 
+      />
     </div>
   );
 };

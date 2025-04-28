@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Bookmark } from "lucide-react";
+import { Bookmark, Notebook } from "lucide-react";
 
 const BookmarkModal = () => {
   const bookmarkFolders = [
@@ -30,13 +30,13 @@ const BookmarkModal = () => {
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
           <Bookmark className="w-4 h-4" />
-          Save to Bookmark
+          Save to Note
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Add to Bookmark</DialogTitle>
+            <DialogTitle>Add to Note</DialogTitle>
             <button className="text-gray-400 hover:text-gray-500" />
           </div>
         </DialogHeader>
@@ -45,7 +45,7 @@ const BookmarkModal = () => {
             variant="outline"
             className="w-full justify-start text-blue-600 mb-4"
           >
-            + Create New Bookmark Folder
+            + Create New Note
           </Button>
           <div className="space-y-3">
             {bookmarkFolders.map((folder) => (
@@ -55,7 +55,7 @@ const BookmarkModal = () => {
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
-                    <Bookmark className="w-4 h-4 text-blue-600" />
+                    <Notebook className="w-4 h-4 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">{folder.name}</h3>

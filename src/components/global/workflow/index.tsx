@@ -20,6 +20,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import {
+  Code,
+  FileText,
+  BarChart2,
+  MessageCircle,
+  FileSpreadsheet,
+  File,
+  Server,
+  Send,
+  Database,
+  GitMerge,
+} from "lucide-react";
 
 const WorkflowEditor = () => {
   const [nodes, setNodes] = useState([]);
@@ -36,18 +48,83 @@ const WorkflowEditor = () => {
     {
       icon: <Laptop className="w-5 h-5" />,
       title: "Email",
-      description: "Send and email to a user",
+      description: "Send an email to a user.",
     },
     {
       icon: <Headphones className="w-5 h-5" />,
       title: "Discord",
-      description: "Post messages to your discord server",
+      description: "Post messages to your Discord server.",
     },
     {
       icon: <Settings className="w-5 h-5" />,
       title: "Custom Webhook",
       description:
         "Connect any app that has an API key and send data to your application.",
+    },
+    {
+      icon: <Server className="w-5 h-5" />,
+      title: "Finacle Integration",
+      description: "Integrate with Finacle core banking solutions.",
+    },
+    {
+      icon: <BarChart2 className="w-5 h-5" />,
+      title: "Dynatrace Integration",
+      description: "Monitor and optimize applications with Dynatrace.",
+    },
+    {
+      icon: <Send className="w-5 h-5" />,
+      title: "Microsoft Email Integration",
+      description:
+        "Send and receive emails using Microsoft email services.",
+    },
+    {
+      icon: <Database className="w-5 h-5" />,
+      title: "Microsoft Entra Integration",
+      description:
+        "Integrate with Microsoft Entra for identity and access management.",
+    },
+    {
+      icon: <Code className="w-5 h-5" />,
+      title: "Custom Code",
+      description: "Execute custom code for automation and integration.",
+    },
+    {
+      icon: <GitMerge className="w-5 h-5" />,
+      title: "X to JSON Middleware",
+      description: "Convert various formats (XML, CSV, etc.) to JSON.",
+    },
+    {
+      icon: <Server className="w-5 h-5" />,
+      title: "ServiceNow Integration",
+      description:
+        "Automate workflows and IT service management with ServiceNow.",
+    },
+    {
+      icon: <MessageCircle className="w-5 h-5" />,
+      title: "Chat",
+      description: "Enable AI-powered chat features.",
+    },
+    {
+      icon: <BarChart2 className="w-5 h-5" />,
+      title: "Visualize",
+      description: "Generate data visualizations and insights.",
+    },
+    {
+      icon: <FileText className="w-5 h-5" />,
+      title: "Jira Integration",
+      description: "Manage issues and track projects using Jira.",
+    },
+    {
+      icon: <FileSpreadsheet className="w-5 h-5" />,
+      title: "Excel Sheet Reader",
+      description:
+        "Read and process Excel sheets for data analysis.",
+    },
+    {
+      icon: <File className="w-5 h-5" />,
+      title: "PDF Reader",
+      description:
+        "Extract and process content from PDF files.",
     },
   ];
 
@@ -170,8 +247,8 @@ const WorkflowEditor = () => {
         {/* Right Sidebar */}
         <div className="w-80 border-l border-gray-200 p-4">
           <div className="flex justify-between mb-4">
-            <span className="font-medium">Actions</span>
-            <span className="text-gray-500">Settings</span>
+            <span className="font-medium text-sm">Actions</span>
+            <span className="text-gray-500 text-sm">Settings</span>
           </div>
 
           <div className="relative mb-4">
@@ -183,17 +260,19 @@ const WorkflowEditor = () => {
             {actions.map((action, index) => (
               <div
                 key={index}
-                className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 cursor-move transition-colors"
+                className="p-2 rounded-lg border border-gray-200 hover:border-gray-300 cursor-move transition-colors"
                 draggable
                 onDragStart={(event) =>
                   onDragStart(event, "default", action.title)
                 }
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   {action.icon}
                   <div>
-                    <h3 className="font-medium text-sm">{action.title}</h3>
-                    <p className="text-xs text-gray-500">
+                    <h3 className="font-medium text-xs">
+                      {action.title}
+                    </h3>
+                    <p className="text-[10px] text-gray-500">
                       {action.description}
                     </p>
                   </div>

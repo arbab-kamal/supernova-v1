@@ -1,13 +1,15 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Sidebar from "@/components/global/sidebar";
 import { useTheme } from "next-themes";
 import { getThemeColors } from "@/lib/constant";
+import Drawer from "@/components/global/sidebar/Drawer/drawer";
 
 const Layout = ({ children }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   return (
     <div 
@@ -30,6 +32,10 @@ const Layout = ({ children }) => {
           style={{ color: colors.text.primary }}
         >
           {children}
+          <Drawer 
+        open={notesOpen} 
+        onClose={() => setNotesOpen(false)} 
+      />
         </div>
       </div>
     </div>
