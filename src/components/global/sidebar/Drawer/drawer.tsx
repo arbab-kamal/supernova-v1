@@ -72,7 +72,9 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
       if (typeof response.data === "string") {
         try {
-          parsedNotes = JSON.parse(response.data);
+          const parsed = JSON.parse(response.data);
+          // Ensure parsedNotes is an array
+          parsedNotes = Array.isArray(parsed) ? parsed : [parsed];
         } catch {
           parsedNotes = [
             {
@@ -83,7 +85,8 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
           ];
         }
       } else {
-        parsedNotes = response.data;
+        // Ensure response.data is treated as an array
+        parsedNotes = Array.isArray(response.data) ? response.data : [response.data];
       }
 
       setNotes(parsedNotes);
@@ -218,7 +221,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
               No notes yet. Add your first note above!
             </div>
           ) : (
-            notes && notes.map((note) => (
+            Array.isArray(notes) && notes.map((note) => (
               <div key={note.id} className="p-4 border-b hover:bg-gray-50">
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-xs text-gray-500">
