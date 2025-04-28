@@ -64,7 +64,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
     setError(null);
 
     try {
-      const response = await axios.get("/getNotes", {
+      const response = await axios.get("http://localhost:8080/getNotes", {
         params: { projectName },
       });
 
@@ -118,7 +118,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
     try {
       await axios.put(
-        "/updateNotes",
+        "http://localhost:8080/updateNotes",
         {
           projectName,
           note: newNote,
