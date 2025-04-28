@@ -27,6 +27,23 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
   // Get current project from Redux store
   const currentProject = useSelector(selectCurrentProject);
+  
+  // Handle different formats of currentProject like in ShareNotes component
+  const projectName = 
+    typeof currentProject === 'object' && currentProject !== null
+      ? currentProject.title || currentProject.name
+      : typeof currentProject === 'string'
+        ? currentProject
+        : null;
+  
+  const canSaveNote = Boolean(projectName) && Boolean(noteInput.trim());
+  
+  // Debug logging similar to ShareNotes component
+  useEffect(() => {
+    console.log("Drawer - Current Project:", currentProject);
+    console.log("Project Name detected:", projectName);
+    console.log("Can Save Note:", canSaveNote);
+  }, [currentProject, projectName, canSaveNote, noteInput]);
 
   // Only render portal on client
   useEffect(() => {
@@ -35,20 +52,20 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
   // Fetch notes when drawer opens or project changes
   useEffect(() => {
-    if (mounted && open && currentProject?.name) {
+    if (mounted && open && projectName) {
       fetchNotes();
     }
-  }, [mounted, open, currentProject?.name]);
+  }, [mounted, open, projectName]);
 
   const fetchNotes = async () => {
-    if (!currentProject?.name) return;
+    if (!projectName) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await axios.get("/getNotes", {
-        params: { projectName: currentProject.name },
+        params: { projectName },
       });
 
       let parsedNotes: Note[] = [];
@@ -87,7 +104,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
   const handleSaveNote = async () => {
     // only when there's text and a project
-    if (!noteInput.trim() || !currentProject?.name) return;
+    if (!noteInput.trim() || !projectName) return;
 
     const newNote: Note = {
       id: Date.now().toString(),
@@ -103,7 +120,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
       await axios.put(
         "/updateNotes",
         {
-          projectName: currentProject.name,
+          projectName,
           note: newNote,
         },
         {
@@ -123,7 +140,7 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
 
     try {
       await axios.delete("/deleteNote", {
-        params: { projectName: currentProject?.name, noteId: id },
+        params: { projectName, noteId: id },
       });
     } catch (err) {
       console.error("Error deleting note:", err);
@@ -147,9 +164,9 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">
-            {currentProject?.name
-              ? `Notes: ${currentProject.name}`
-              : "Notes"}
+            {projectName
+              ? `Notes: ${projectName}`
+              : "Notes (No Project Selected)"}
           </h2>
           <button
             onClick={onClose}
@@ -163,22 +180,24 @@ const Drawer = ({ open, onClose }: DrawerProps) => {
         <div className="p-4 border-b">
           <textarea
             className="w-full border rounded-md p-2 h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Write a note..."
+            placeholder={projectName ? "Write a note..." : "Select a project first..."}
             value={noteInput}
             onChange={(e) => setNoteInput(e.target.value)}
+            disabled={!projectName}
           />
           <button
             onClick={handleSaveNote}
-            disabled={!noteInput.trim() || !currentProject?.name}
+            disabled={!canSaveNote}
             className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
           >
             Save Note
+            {!projectName && <span className="ml-1 text-xs opacity-70">(No project selected)</span>}
           </button>
         </div>
 
         {/* Notes List */}
         <div className="overflow-auto h-[calc(100%-200px)]">
-          {!currentProject?.name ? (
+          {!projectName ? (
             <div className="p-4 text-gray-500 text-center">
               Select a project to see notes.
             </div>

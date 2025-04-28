@@ -155,8 +155,8 @@ export default function ShareNotes({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                        <TableHead className='text-gray-900 dark:text-white'>Email</TableHead>
+                        <TableHead className="text-right text-gray-900 dark:text-white">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
