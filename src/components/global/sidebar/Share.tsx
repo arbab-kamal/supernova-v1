@@ -38,8 +38,23 @@ export default function ShareNotes({
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
 
   const currentProject = useSelector(selectCurrentProject)
-  const projectName = currentProject?.name
+  
+  // Handle different formats of currentProject (object with title, object with name, or string)
+  const projectName = 
+    typeof currentProject === 'object' && currentProject !== null
+      ? currentProject.title || currentProject.name  // Try both title and name properties
+      : typeof currentProject === 'string'
+        ? currentProject
+        : null;
+  
   const canShare = Boolean(projectName)
+  
+  // Debug logs - you can remove these after fixing the issue
+  useEffect(() => {
+    console.log("ShareNotes - Current Project:", currentProject)
+    console.log("Project Name detected:", projectName)
+    console.log("Can Share:", canShare)
+  }, [currentProject, projectName, canShare])
 
   // Fetch users when modal opens
   useEffect(() => {
@@ -55,6 +70,7 @@ export default function ShareNotes({
   }, [isOpen])
 
   const openModal = () => {
+    console.log("Opening modal, canShare:", canShare)
     if (onOpenChange) {
       onOpenChange(true);
     } else {
@@ -78,9 +94,12 @@ export default function ShareNotes({
     setShareError(null)
     setShareSuccess(null)
 
+    // Determine what to send as projectName based on the current project structure
+    const projectNameToShare = projectName;
+
     axios
       .post('http://localhost:8080/shareNotes', null, {
-        params: { projectName, receiverEmail: email },
+        params: { projectName: projectNameToShare, receiverEmail: email },
       })
       .then(() => setShareSuccess(`Notes shared with ${email}`))
       .catch(err =>
@@ -100,6 +119,7 @@ export default function ShareNotes({
         >
           <Share2 className="w-4 h-4 mr-2 text-white" />
           Share Notes
+          {!canShare && <span className="ml-1 text-xs opacity-70">(No project selected)</span>}
         </Button>
       )}
 
@@ -129,6 +149,8 @@ export default function ShareNotes({
                 <div className="flex justify-center py-10">Loading…</div>
               ) : error ? (
                 <p className="text-red-600">Error: {error}</p>
+              ) : users.length === 0 ? (
+                <p className="py-4 text-gray-600">No users found to share with.</p>
               ) : (
                 <>
                   {shareError && (
