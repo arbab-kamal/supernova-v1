@@ -45,7 +45,7 @@ const SharedNotes = () => {
   };
 
   // Redirects to your existing chat page with the shareId and projectName
-  const handleNoteClick = (shareId, projectName, senderId) => {
+  const handleNoteClick = (shareId, projectName, senderName) => {
     // Update this path to match your existing chat page route
     router.push(`/chat`)
   };
@@ -105,7 +105,7 @@ const SharedNotes = () => {
               <div 
                 key={note.shareId} 
                 className="border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleNoteClick(note.shareId, note.projectName, note.senderId)}
+                onClick={() => handleNoteClick(note.shareId, note.projectName, note.senderName)}
               >
                 <div className="flex items-center mb-2">
                   <div className="bg-blue-100 p-2 rounded-full">
@@ -114,7 +114,7 @@ const SharedNotes = () => {
                   <h3 className="ml-2 font-medium truncate">{note.projectName || "Untitled Note"}</h3>
                 </div>
                 <div className="flex items-center text-sm text-gray-500">
-                  <span>Shared by: {note.senderId || "Unknown"}</span>
+                  <span>Shared by: {note.senderName || "Unknown"}</span>
                 </div>
                 <div className="mt-2 pt-2 border-t text-sm text-gray-500">
                   {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
