@@ -1,37 +1,27 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Edit, Eye } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, MessageSquare, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 
-const SharedNoteDetail = ({ params }) => {
+const SharedNotes = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const shareId = params?.shareId;
-  const projectName = searchParams.get("projectName") || "Shared Note";
-  
+  const [sharedNotes, setSharedNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [noteContent, setNoteContent] = useState("");
-  const [sender, setSender] = useState("");
-  const [readOnly, setReadOnly] = useState(true);
-  
+
   useEffect(() => {
-    if (shareId) {
-      fetchSharedNote();
-    }
-  }, [shareId]);
-  
-  const fetchSharedNote = async () => {
+    fetchSharedNotes();
+  }, []);
+
+  const fetchSharedNotes = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log(`Fetching note with shareId: ${shareId}`);
-      // Changed endpoint to match API documentation
-      const response = await axios.get(`http://localhost:8080/getSharedNote/${shareId}`, {
+      const response = await axios.get('http://localhost:8080/getSharedNotes', {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -41,135 +31,101 @@ const SharedNoteDetail = ({ params }) => {
       console.log("API Response:", response.data);
       
       if (response.data) {
-        // Updated to match actual API response structure from image
-        setNoteContent(response.data.notes || "");
-        setSender(response.data.senderId || "Unknown");
+        setSharedNotes(response.data);
       } else {
         setError("No data received from the server");
       }
     } catch (error) {
-      console.error("Error fetching shared note:", error);
-      setError(error.response?.data?.message || error.message || "Failed to load shared note");
-      toast.error("Failed to load shared note. Please try again.");
+      console.error("Error fetching shared notes:", error);
+      setError(error.response?.data?.message || error.message || "Failed to load shared notes");
+      toast.error("Failed to load shared notes. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-  
-  const handleSaveNotes = async () => {
-    try {
-      // Updated endpoint and payload to match API expectations
-      const response = await axios.post(`http://localhost:8080/updateSharedNote/${shareId}`, {
-        notes: noteContent
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log("Save response:", response.data);
-      toast.success("Note updated successfully!");
-    } catch (error) {
-      console.error("Error updating shared note:", error);
-      toast.error(error.response?.data?.message || "Failed to update note. Please try again.");
-    }
+
+  // Redirects to your existing chat page with the shareId and projectName
+  const handleNoteClick = (shareId, projectName, senderId) => {
+    // Update this path to match your existing chat page route
+    router.push(`/chat`)
   };
-  
-  const toggleEditMode = () => {
-    setReadOnly(!readOnly);
-  };
-  
-  const handleRetry = () => {
-    fetchSharedNote();
-  };
-  
+
+  // const handleCreateNote = () => {
+  //   router.push('/notes/create-shared');
+  // };
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/notes/shared")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-medium">{projectName}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={toggleEditMode}
-            className="text-sm"
-          >
-            {readOnly ? (
-              <>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                View Only
-              </>
-            )}
-          </Button>
-          {!readOnly && (
-            <Button
-              onClick={handleSaveNotes}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      {/* Shared by information */}
-      <div className="bg-blue-50 p-3 text-sm">
-        <span className="font-medium">Shared by:</span> {sender}
-        {readOnly && (
-          <span className="ml-2 text-gray-500">(View only)</span>
-        )}
+        <h1 className="text-lg font-medium">Shared Notes</h1>
+        {/* <Button 
+          onClick={handleCreateNote}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <Plus className="h-4 w-4 mr-2" /> Share Note
+        </Button> */}
       </div>
       
       {/* Content */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-            <p className="mt-2">Loading note content...</p>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-red-500 mb-4">{error}</p>
-            <Button onClick={handleRetry} variant="outline">
-              Retry
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 p-4">
-          {readOnly ? (
-            <div className="prose max-w-none whitespace-pre-wrap">
-              {noteContent || "This shared note has no content."}
+      <div className="flex-1 p-4">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+              <p className="mt-2">Loading shared notes...</p>
             </div>
-          ) : (
-            <textarea
-              className="w-full h-full p-4 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-              placeholder="Write your notes here..."
-            />
-          )}
-        </div>
-      )}
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={fetchSharedNotes} variant="outline">
+                Retry
+              </Button>
+            </div>
+          </div>
+        ) : sharedNotes.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No shared notes</h3>
+              <p className="text-gray-500 mb-4">You don't have any shared notes yet.</p>
+              <Button 
+                onClick={handleCreateNote}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Share Note
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {sharedNotes.map((note) => (
+              <div 
+                key={note.shareId} 
+                className="border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleNoteClick(note.shareId, note.projectName, note.senderId)}
+              >
+                <div className="flex items-center mb-2">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <h3 className="ml-2 font-medium truncate">{note.projectName || "Untitled Note"}</h3>
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <span>Shared by: {note.senderId || "Unknown"}</span>
+                </div>
+                <div className="mt-2 pt-2 border-t text-sm text-gray-500">
+                  {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default SharedNoteDetail;
+export default SharedNotes;
