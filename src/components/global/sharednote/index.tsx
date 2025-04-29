@@ -4,21 +4,32 @@ import axios from "axios";
 import { FileText, Clock, ExternalLink, AlertCircle, Search } from "lucide-react";
 import SharedNoteDrawer from "./drawer";
 
+// Updated interface to match the API response based on your drawer component
 interface SharedNote {
-  id: string;
-  shareId: string;
+  sharedNoteId: string;  // This is likely the shareId in your current code
+  senderId: string;      // This is likely the senderName in your current code
   projectName: string;
-  senderName: string;
-  createdAt: string;
-  updatedAt?: string;
+  projectId: string;
+  content: string;
+  date: string;          // This is likely the createdAt in your current code
+}
+
+// Interface for the component's state representation of notes
+interface ProcessedNote {
+  id: string;           // Unique identifier for the note
+  shareId: string;      // ID used for the drawer component
+  projectName: string;
+  senderName: string;   // From senderId
+  createdAt: string;    // From date
+  content?: string;     // Optional content preview
 }
 
 const SharedNotesList = () => {
-  const [sharedNotes, setSharedNotes] = useState<SharedNote[]>([]);
+  const [sharedNotes, setSharedNotes] = useState<ProcessedNote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedNote, setSelectedNote] = useState<SharedNote | null>(null);
+  const [selectedNote, setSelectedNote] = useState<ProcessedNote | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -37,9 +48,23 @@ const SharedNotesList = () => {
         }
       });
 
+      console.log("API Response:", response.data);  // Debugging log
+
       if (response.data && Array.isArray(response.data)) {
-        setSharedNotes(response.data);
+        // Process and transform the API response to match our component's needs
+        const processedNotes: ProcessedNote[] = response.data.map((apiNote: SharedNote) => ({
+          id: apiNote.sharedNoteId,
+          shareId: apiNote.sharedNoteId,
+          projectName: apiNote.projectName || "Unnamed Project",
+          senderName: apiNote.senderId || "Unknown Sender",
+          createdAt: apiNote.date || "",
+          content: apiNote.content?.substring(0, 50) + (apiNote.content?.length > 50 ? "..." : "")
+        }));
+        
+        setSharedNotes(processedNotes);
+        console.log("Processed Notes:", processedNotes);  // Debugging log
       } else {
+        console.warn("Unexpected API response format:", response.data);
         setSharedNotes([]);
       }
     } catch (err) {
@@ -64,11 +89,13 @@ const SharedNotesList = () => {
         return "Invalid date";
       }
       
-      // Format the date
+      // Format the date with time
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       }).format(date);
     } catch (e) {
       console.error("Error formatting date:", e, dateString);
@@ -76,7 +103,7 @@ const SharedNotesList = () => {
     }
   };
 
-  const openNoteDrawer = (note: SharedNote) => {
+  const openNoteDrawer = (note: ProcessedNote) => {
     setSelectedNote(note);
     setIsDrawerOpen(true);
   };
@@ -118,7 +145,7 @@ const SharedNotesList = () => {
         ) : error ? (
           <div className="flex items-center">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-            <h2 className="text-red-700 font-medium">Error loading shared notes</h2>
+            <h2 className="text-red-700 font-medium">Error loading shared notes: {error}</h2>
           </div>
         ) : sharedNotes.length === 0 ? (
           <div className="flex items-center">
@@ -150,7 +177,7 @@ const SharedNotesList = () => {
       </div>
 
       {/* Notes list */}
-      {!isLoading && !error && sharedNotes.length > 0 ? (
+      {!isLoading && !error && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <ul className="divide-y divide-gray-200">
             {filteredNotes.length > 0 ? (
@@ -172,6 +199,9 @@ const SharedNotesList = () => {
                           <Clock className="h-3 w-3 mr-1" />
                           <span>{formatDate(note.createdAt)}</span>
                         </div>
+                        {note.content && (
+                          <p className="mt-2 text-sm text-gray-600">{note.content}</p>
+                        )}
                       </div>
                     </div>
                     <ExternalLink className="h-5 w-5 text-gray-400" />
@@ -185,7 +215,7 @@ const SharedNotesList = () => {
             )}
           </ul>
         </div>
-      ) : null}
+      )}
 
       {/* Selected note drawer */}
       {selectedNote && (
