@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
 
 interface SharedNoteDrawerProps {
   open: boolean;
@@ -36,28 +35,33 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
     setError(null);
 
     try {
-      // Call your existing API endpoint for getting shared note content
-      const response = await axios.get("http://localhost:8080/getSharedNoteContent", {
-        params: { shareId },
+      // Call the GET /getSharedNotes endpoint
+      const response = await fetch("http://localhost:8080/getSharedNotes", {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
 
-      console.log("Shared Note Content Response:", response.data);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch notes: ${response.status}`);
+      }
 
-      // Handle different response formats
-      if (response.data && response.data.content) {
-        setNoteContent(response.data.content);
-      } else if (typeof response.data === "string") {
-        setNoteContent(response.data);
+      const data = await response.json();
+      
+      // Find the note that matches the shareId
+      const matchingNote = Array.isArray(data) 
+        ? data.find(note => note.sharedNoteId === shareId) 
+        : null;
+      
+      if (matchingNote && matchingNote.content) {
+        setNoteContent(matchingNote.content);
       } else {
-        setNoteContent(JSON.stringify(response.data));
+        setNoteContent("");
       }
     } catch (err) {
       console.error("Error fetching shared note content:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +78,7 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
       />
 
       {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
+      <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <div>
@@ -93,27 +97,14 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
           </button>
         </div>
 
-        {/* Status indicator */}
-        {isLoading && (
-          <div className="p-2 bg-blue-50 text-blue-700 text-sm text-center">
-            Loading note...
-          </div>
-        )}
-        {error && (
-          <div className="p-2 bg-red-50 text-red-700 text-sm text-center">
-            {error}
-          </div>
-        )}
-
         {/* Note Content */}
         <div className="p-4 h-[calc(100%-4rem)] overflow-auto">
-          {noteContent ? (
-            <div className="whitespace-pre-wrap">{noteContent}</div>
-          ) : (
-            <div className="text-gray-500 italic">
-              {isLoading ? "Loading..." : "No content available"}
-            </div>
-          )}
+          <textarea
+            className="w-full h-full p-3 border border-gray-200 rounded resize-none"
+            value={isLoading ? "Loading..." : noteContent}
+            readOnly
+            placeholder="No content available"
+          />
         </div>
       </div>
     </>,

@@ -52,9 +52,16 @@ const SharedNotesList = () => {
 
   const formatDate = (dateValue: string | number): string => {
     try {
+      // Handle various date formats or timestamps
       const date = typeof dateValue === 'number'
         ? new Date(dateValue)
-        : new Date(dateValue);
+        : new Date(dateValue.replace(/(\d{2}):(\d{2})\.(\d{3})Z$/, "$1:$2:00.$3Z"));
+      
+      // Check if the date is valid before formatting
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date value:", dateValue);
+        return "Invalid date";
+      }
       
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
@@ -62,6 +69,7 @@ const SharedNotesList = () => {
         year: 'numeric'
       }).format(date);
     } catch (e) {
+      console.error("Error formatting date:", e, dateValue);
       return "Invalid date";
     }
   };
