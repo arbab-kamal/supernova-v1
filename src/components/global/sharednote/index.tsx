@@ -9,8 +9,8 @@ interface SharedNote {
   shareId: string;
   projectName: string;
   senderName: string;
-  createdAt: string | number;
-  updatedAt?: string | number;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 const SharedNotesList = () => {
@@ -50,26 +50,28 @@ const SharedNotesList = () => {
     }
   };
 
-  const formatDate = (dateValue: string | number): string => {
+  const formatDate = (dateString: string): string => {
     try {
-      // Handle various date formats or timestamps
-      const date = typeof dateValue === 'number'
-        ? new Date(dateValue)
-        : new Date(dateValue.replace(/(\d{2}):(\d{2})\.(\d{3})Z$/, "$1:$2:00.$3Z"));
+      // Simple check to ensure we have a value
+      if (!dateString) return "Unknown date";
       
-      // Check if the date is valid before formatting
+      // Create a date object from the ISO string
+      const date = new Date(dateString);
+      
+      // Check if the date is valid
       if (isNaN(date.getTime())) {
-        console.warn("Invalid date value:", dateValue);
+        console.warn("Invalid date value:", dateString);
         return "Invalid date";
       }
       
+      // Format the date
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
       }).format(date);
     } catch (e) {
-      console.error("Error formatting date:", e, dateValue);
+      console.error("Error formatting date:", e, dateString);
       return "Invalid date";
     }
   };

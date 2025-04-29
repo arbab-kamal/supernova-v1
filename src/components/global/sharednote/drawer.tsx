@@ -10,6 +10,15 @@ interface SharedNoteDrawerProps {
   senderName: string | null;
 }
 
+interface SharedNote {
+  sharedNoteId: string;
+  senderId: string;
+  projectName: string;
+  projectId: string;
+  content: string;
+  date: string;
+}
+
 const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: SharedNoteDrawerProps) => {
   const [noteContent, setNoteContent] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -51,17 +60,20 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
       const data = await response.json();
       
       // Find the note that matches the shareId
-      const matchingNote = Array.isArray(data) 
-        ? data.find(note => note.sharedNoteId === shareId) 
+      const matchingNote = Array.isArray(data)
+        ? data.find((note: SharedNote) => note.sharedNoteId === shareId)
         : null;
       
-      if (matchingNote && matchingNote.content) {
-        setNoteContent(matchingNote.content);
+      if (matchingNote) {
+        // Directly use the note content from the sender
+        setNoteContent(matchingNote.content || "");
       } else {
         setNoteContent("");
+        setError("Note not found");
       }
     } catch (err) {
       console.error("Error fetching shared note content:", err);
+      setError("Failed to load note");
     } finally {
       setIsLoading(false);
     }
@@ -99,12 +111,19 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
 
         {/* Note Content */}
         <div className="p-4 h-[calc(100%-4rem)] overflow-auto">
-          <textarea
-            className="w-full h-full p-3 border border-gray-200 rounded resize-none"
-            value={isLoading ? "Loading..." : noteContent}
-            readOnly
-            placeholder="No content available"
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <p>Loading...</p>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full text-red-500">
+              <p>{error}</p>
+            </div>
+          ) : (
+            <div className="w-full h-full p-3 border border-gray-200 rounded overflow-auto whitespace-pre-wrap">
+              {noteContent || "No content available"}
+            </div>
+          )}
         </div>
       </div>
     </>,
