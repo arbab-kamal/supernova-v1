@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
-import { Clock } from "lucide-react";
 
 interface SharedNoteDrawerProps {
   open: boolean;
@@ -12,16 +11,8 @@ interface SharedNoteDrawerProps {
   senderName: string | null;
 }
 
-interface SharedNoteResponse {
-  content: string;
-  createdAt?: string | number; // API might return date as string or timestamp
-  updatedAt?: string | number;
-  [key: string]: any; // For any other properties
-}
-
 const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: SharedNoteDrawerProps) => {
   const [noteContent, setNoteContent] = useState("");
-  const [noteDate, setNoteDate] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,27 +28,6 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
       fetchSharedNoteContent();
     }
   }, [mounted, open, shareId]);
-
-  const formatDate = (dateValue: string | number | undefined): string => {
-    if (!dateValue) return "Unknown date";
-    
-    try {
-      const date = typeof dateValue === 'number' 
-        ? new Date(dateValue) 
-        : new Date(dateValue);
-      
-      return new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    } catch (e) {
-      console.error("Error formatting date:", e);
-      return "Invalid date";
-    }
-  };
 
   const fetchSharedNoteContent = async () => {
     if (!shareId) return;
@@ -78,22 +48,12 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
       console.log("Shared Note Content Response:", response.data);
 
       // Handle different response formats
-      if (response.data) {
-        const data: SharedNoteResponse = 
-          typeof response.data === "string" 
-            ? { content: response.data } 
-            : response.data;
-        
-        // Set content
-        setNoteContent(data.content || JSON.stringify(data));
-        
-        // Set date from updatedAt or createdAt
-        const dateValue = data.updatedAt || data.createdAt;
-        if (dateValue) {
-          setNoteDate(formatDate(dateValue));
-        }
+      if (response.data && response.data.content) {
+        setNoteContent(response.data.content);
+      } else if (typeof response.data === "string") {
+        setNoteContent(response.data);
       } else {
-        setNoteContent("No content available");
+        setNoteContent(JSON.stringify(response.data));
       }
     } catch (err) {
       console.error("Error fetching shared note content:", err);
@@ -123,12 +83,6 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
             </h2>
             {senderName && (
               <p className="text-sm text-gray-500">Shared by: {senderName}</p>
-            )}
-            {noteDate && (
-              <div className="flex items-center mt-1 text-xs text-gray-400">
-                <Clock className="h-3 w-3 mr-1" />
-                <span>{noteDate}</span>
-              </div>
             )}
           </div>
           <button
