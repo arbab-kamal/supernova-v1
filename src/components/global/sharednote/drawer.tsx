@@ -7,24 +7,36 @@ interface SharedNoteDrawerProps {
   onClose: () => void;
   shareId: string | null;
   projectName: string | null;
+  projectId: string | null;
   senderName: string | null;
+  noteContent: string | null; // Added to receive content directly
 }
 
 interface SharedNote {
-  sharedNoteId: string;
+  sharedNotesId: string; // Fixed field name to match API
   senderId: string;
+  senderName: string;
   projectName: string;
   projectId: string;
-  content: string;
+  notes: string; // API returns "notes" not "content"
   date: string;
+  receiverId: string;
 }
 
-const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: SharedNoteDrawerProps) => {
-  const [noteContent, setNoteContent] = useState("");
+const SharedNoteDrawer = ({ 
+  open, 
+  onClose, 
+  shareId, 
+  projectName, 
+  projectId, 
+  senderName, 
+  noteContent 
+}: SharedNoteDrawerProps) => {
+  const [content, setContent] = useState(""); // To store the note content
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [noteData, setNoteData] = useState<SharedNote | null>(null);
+  const [date, setDate] = useState<string | null>(null);
 
   // Only render portal on client
   useEffect(() => {
@@ -38,12 +50,19 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
     }
   }, [open]);
 
-  // Fetch note content when drawer opens or shareId changes
+  // Set content when drawer opens with new note
   useEffect(() => {
-    if (mounted && open && shareId) {
-      fetchSharedNoteContent();
+    if (mounted && open) {
+      if (noteContent) {
+        // If the content is directly provided, use it
+        setContent(noteContent);
+        setIsLoading(false);
+      } else if (shareId) {
+        // If no content is provided but we have a shareId, fetch it
+        fetchSharedNoteContent();
+      }
     }
-  }, [mounted, open, shareId]);
+  }, [mounted, open, shareId, noteContent]);
 
   const fetchSharedNoteContent = async () => {
     if (!shareId) return;
@@ -69,15 +88,15 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
       
       // Find the note that matches the shareId
       const matchingNote = Array.isArray(data)
-        ? data.find((note: SharedNote) => note.sharedNoteId === shareId)
+        ? data.find((note: SharedNote) => note.sharedNotesId === shareId) // Fixed field name
         : null;
       
       if (matchingNote) {
-        setNoteData(matchingNote);
-        setNoteContent(matchingNote.content || "");
+        setContent(matchingNote.notes || ""); // Use "notes" not "content"
+        setDate(matchingNote.date || null);
       } else {
-        setNoteData(null);
-        setNoteContent("");
+        setContent("");
+        setDate(null);
         setError("Note not found. The shared note may have been deleted or the ID is incorrect.");
       }
     } catch (err) {
@@ -120,16 +139,16 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
         <div className="flex justify-between items-center p-4 border-b">
           <div className="flex-1 mr-2">
             <h2 id="drawer-title" className="text-lg font-semibold truncate">
-              {projectName || noteData?.projectName || "Shared Note"}
+              {projectName || "Shared Note"}
             </h2>
-            {(senderName || noteData?.senderId) && (
+            {senderName && (
               <p className="text-sm text-gray-500">
-                Shared by: {senderName || noteData?.senderId}
+                Shared by: {senderName}
               </p>
             )}
-            {noteData?.date && (
+            {date && (
               <p className="text-xs text-gray-400">
-                {formatDate(noteData.date)}
+                {formatDate(date)}
               </p>
             )}
           </div>
@@ -164,12 +183,12 @@ const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: S
           ) : (
             <>
               <div className="w-full h-full p-4 border border-gray-200 rounded-lg overflow-auto whitespace-pre-wrap bg-gray-50">
-                {noteContent ? noteContent : "No content available"}
+                {content ? content : "No content available"}
               </div>
-              {noteData?.projectId && (
+              {projectId && (
                 <div className="mt-4 text-right">
                   <span className="text-xs text-gray-500">
-                    Project ID: {noteData.projectId}
+                    Project ID: {projectId}
                   </span>
                 </div>
               )}

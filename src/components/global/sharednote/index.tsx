@@ -4,24 +4,27 @@ import axios from "axios";
 import { FileText, Clock, ExternalLink, AlertCircle, Search } from "lucide-react";
 import SharedNoteDrawer from "./drawer";
 
-// Updated interface to match the API response based on your drawer component
+// Updated interface to match the API response
 interface SharedNote {
-  sharedNoteId: string;  // This is likely the shareId in your current code
-  senderId: string;      // This is likely the senderName in your current code
+  sharedNotesId: string; // Note the "s" in "notesId" based on API
+  senderId: string;
+  senderName: string;
   projectName: string;
   projectId: string;
-  content: string;
-  date: string;          // This is likely the createdAt in your current code
+  notes: string; // API returns "notes" not "content"
+  date: string;
+  receiverId: string;
 }
 
 // Interface for the component's state representation of notes
 interface ProcessedNote {
-  id: string;           // Unique identifier for the note
-  shareId: string;      // ID used for the drawer component
+  id: string;
+  shareId: string;
   projectName: string;
-  senderName: string;   // From senderId
-  createdAt: string;    // From date
-  content?: string;     // Optional content preview
+  senderName: string;
+  content: string;
+  projectId: string;
+  createdAt: string;
 }
 
 const SharedNotesList = () => {
@@ -53,12 +56,13 @@ const SharedNotesList = () => {
       if (response.data && Array.isArray(response.data)) {
         // Process and transform the API response to match our component's needs
         const processedNotes: ProcessedNote[] = response.data.map((apiNote: SharedNote) => ({
-          id: apiNote.sharedNoteId,
-          shareId: apiNote.sharedNoteId,
+          id: apiNote.sharedNotesId, // Fixed field name to match API
+          shareId: apiNote.sharedNotesId, // Fixed field name to match API
           projectName: apiNote.projectName || "Unnamed Project",
-          senderName: apiNote.senderId || "Unknown Sender",
-          createdAt: apiNote.date || "",
-          content: apiNote.content?.substring(0, 50) + (apiNote.content?.length > 50 ? "..." : "")
+          senderName: apiNote.senderName || "Unknown Sender",
+          content: apiNote.notes || "", // Map "notes" from API to "content" for our component
+          projectId: apiNote.projectId || "",
+          createdAt: apiNote.date || ""
         }));
         
         setSharedNotes(processedNotes);
@@ -199,9 +203,6 @@ const SharedNotesList = () => {
                           <Clock className="h-3 w-3 mr-1" />
                           <span>{formatDate(note.createdAt)}</span>
                         </div>
-                        {note.content && (
-                          <p className="mt-2 text-sm text-gray-600">{note.content}</p>
-                        )}
                       </div>
                     </div>
                     <ExternalLink className="h-5 w-5 text-gray-400" />
@@ -224,7 +225,9 @@ const SharedNotesList = () => {
           onClose={closeNoteDrawer}
           shareId={selectedNote.shareId}
           projectName={selectedNote.projectName}
+          projectId={selectedNote.projectId}
           senderName={selectedNote.senderName}
+          noteContent={selectedNote.content} // Pass the content directly to the drawer
         />
       )}
     </div>
