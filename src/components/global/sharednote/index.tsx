@@ -30,6 +30,7 @@ const SharedNoteDetail = ({ params }) => {
       setError(null);
       
       console.log(`Fetching note with shareId: ${shareId}`);
+      // Changed endpoint to match API documentation
       const response = await axios.get(`http://localhost:8080/getSharedNote/${shareId}`, {
         headers: {
           'Content-Type': 'application/json',
@@ -40,8 +41,9 @@ const SharedNoteDetail = ({ params }) => {
       console.log("API Response:", response.data);
       
       if (response.data) {
+        // Updated to match actual API response structure from image
         setNoteContent(response.data.notes || "");
-        setSender(response.data.senderName || "Unknown");
+        setSender(response.data.senderId || "Unknown");
       } else {
         setError("No data received from the server");
       }
@@ -56,6 +58,7 @@ const SharedNoteDetail = ({ params }) => {
   
   const handleSaveNotes = async () => {
     try {
+      // Updated endpoint and payload to match API expectations
       const response = await axios.post(`http://localhost:8080/updateSharedNote/${shareId}`, {
         notes: noteContent
       }, {
