@@ -1,170 +1,194 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import axios from "axios";
-import { Clock } from "lucide-react";
+import { FileText, Clock, ExternalLink, AlertCircle, Search } from "lucide-react";
+import SharedNoteDrawer from "./drawer";
 
-interface SharedNoteDrawerProps {
-  open: boolean;
-  onClose: () => void;
-  shareId: string | null;
-  projectName: string | null;
-  senderName: string | null;
-}
-
-interface SharedNoteResponse {
-  content: string;
-  createdAt?: string | number; // API might return date as string or timestamp
+interface SharedNote {
+  id: string;
+  shareId: string;
+  projectName: string;
+  senderName: string;
+  createdAt: string | number;
   updatedAt?: string | number;
-  [key: string]: any; // For any other properties
 }
 
-const SharedNoteDrawer = ({ open, onClose, shareId, projectName, senderName }: SharedNoteDrawerProps) => {
-  const [noteContent, setNoteContent] = useState("");
-  const [noteDate, setNoteDate] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+const SharedNotesList = () => {
+  const [sharedNotes, setSharedNotes] = useState<SharedNote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedNote, setSelectedNote] = useState<SharedNote | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Only render portal on client
   useEffect(() => {
-    setMounted(true);
+    fetchSharedNotes();
   }, []);
 
-  // Fetch note content when drawer opens or shareId changes
-  useEffect(() => {
-    if (mounted && open && shareId) {
-      fetchSharedNoteContent();
-    }
-  }, [mounted, open, shareId]);
-
-  const formatDate = (dateValue: string | number | undefined): string => {
-    if (!dateValue) return "Unknown date";
-    
-    try {
-      const date = typeof dateValue === 'number' 
-        ? new Date(dateValue) 
-        : new Date(dateValue);
-      
-      return new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    } catch (e) {
-      console.error("Error formatting date:", e);
-      return "Invalid date";
-    }
-  };
-
-  const fetchSharedNoteContent = async () => {
-    if (!shareId) return;
-
+  const fetchSharedNotes = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Call your existing API endpoint for getting shared note content
-      const response = await axios.get("http://localhost:8080/getSharedNoteContent", {
-        params: { shareId },
+      const response = await axios.get("http://localhost:8080/getSharedNotes", {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
 
-      console.log("Shared Note Content Response:", response.data);
-
-      // Handle different response formats
-      if (response.data) {
-        const data: SharedNoteResponse = 
-          typeof response.data === "string" 
-            ? { content: response.data } 
-            : response.data;
-        
-        // Set content
-        setNoteContent(data.content || JSON.stringify(data));
-        
-        // Set date from updatedAt or createdAt
-        const dateValue = data.updatedAt || data.createdAt;
-        if (dateValue) {
-          setNoteDate(formatDate(dateValue));
-        }
+      if (response.data && Array.isArray(response.data)) {
+        setSharedNotes(response.data);
       } else {
-        setNoteContent("No content available");
+        setSharedNotes([]);
       }
     } catch (err) {
-      console.error("Error fetching shared note content:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
+      console.error("Error fetching shared notes:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch shared notes");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!mounted || !open) return null;
+  const formatDate = (dateValue: string | number): string => {
+    try {
+      const date = typeof dateValue === 'number'
+        ? new Date(dateValue)
+        : new Date(dateValue);
+      
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }).format(date);
+    } catch (e) {
+      return "Invalid date";
+    }
+  };
 
-  return createPortal(
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40 transition-opacity"
-        onClick={onClose}
-      />
+  const openNoteDrawer = (note: SharedNote) => {
+    setSelectedNote(note);
+    setIsDrawerOpen(true);
+  };
 
-      {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
-        {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b">
-          <div>
-            <h2 className="text-lg font-semibold truncate">
-              {projectName || "Shared Note"}
-            </h2>
-            {senderName && (
-              <p className="text-sm text-gray-500">Shared by: {senderName}</p>
-            )}
-            {noteDate && (
-              <div className="flex items-center mt-1 text-xs text-gray-400">
-                <Clock className="h-3 w-3 mr-1" />
-                <span>{noteDate}</span>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl"
-          >
-            ×
-          </button>
-        </div>
+  const closeNoteDrawer = () => {
+    setIsDrawerOpen(false);
+  };
 
-        {/* Status indicator */}
-        {isLoading && (
-          <div className="p-2 bg-blue-50 text-blue-700 text-sm text-center">
-            Loading note...
-          </div>
-        )}
-        {error && (
-          <div className="p-2 bg-red-50 text-red-700 text-sm text-center">
-            {error}
-          </div>
-        )}
+  const filteredNotes = sharedNotes.filter(note => 
+    note.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    note.senderName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-        {/* Note Content */}
-        <div className="p-4 h-[calc(100%-4rem)] overflow-auto">
-          {noteContent ? (
-            <div className="whitespace-pre-wrap">{noteContent}</div>
-          ) : (
-            <div className="text-gray-500 italic">
-              {isLoading ? "Loading..." : "No content available"}
-            </div>
-          )}
-        </div>
+  return (
+    <div className="w-full max-w-4xl mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Shared Notes</h1>
+        <button 
+          onClick={fetchSharedNotes}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+        >
+          Refresh
+        </button>
       </div>
-    </>,
-    document.body
+
+      {/* Status heading based on notes availability */}
+      <div className={`p-4 mb-4 rounded-lg ${
+        isLoading ? "bg-blue-50" :
+        error ? "bg-red-50" :
+        sharedNotes.length === 0 ? "bg-yellow-50" : "bg-green-50"
+      }`}>
+        {isLoading ? (
+          <div className="flex items-center">
+            <div className="animate-spin mr-2">
+              <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+            </div>
+            <h2 className="text-blue-700 font-medium">Loading shared notes...</h2>
+          </div>
+        ) : error ? (
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+            <h2 className="text-red-700 font-medium">Error loading shared notes</h2>
+          </div>
+        ) : sharedNotes.length === 0 ? (
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />
+            <h2 className="text-yellow-700 font-medium">You don't have any shared notes</h2>
+          </div>
+        ) : (
+          <div className="flex items-center">
+            <FileText className="h-5 w-5 text-green-500 mr-2" />
+            <h2 className="text-green-700 font-medium">
+              You have {sharedNotes.length} shared note{sharedNotes.length !== 1 ? 's' : ''}
+            </h2>
+          </div>
+        )}
+      </div>
+
+      {/* Search input */}
+      <div className="relative mb-4">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400" />
+        </div>
+        <input
+          type="text"
+          className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search by project or sender name"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {/* Notes list */}
+      {!isLoading && !error && sharedNotes.length > 0 ? (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <ul className="divide-y divide-gray-200">
+            {filteredNotes.length > 0 ? (
+              filteredNotes.map((note) => (
+                <li 
+                  key={note.id} 
+                  className="p-4 hover:bg-gray-50 cursor-pointer transition"
+                  onClick={() => openNoteDrawer(note)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <FileText className="h-5 w-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">{note.projectName}</h3>
+                        <p className="text-sm text-gray-500">Shared by: {note.senderName}</p>
+                        <div className="flex items-center mt-1 text-xs text-gray-400">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>{formatDate(note.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <ExternalLink className="h-5 w-5 text-gray-400" />
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li className="p-6 text-center text-gray-500">
+                No notes matching your search
+              </li>
+            )}
+          </ul>
+        </div>
+      ) : null}
+
+      {/* Selected note drawer */}
+      {selectedNote && (
+        <SharedNoteDrawer
+          open={isDrawerOpen}
+          onClose={closeNoteDrawer}
+          shareId={selectedNote.shareId}
+          projectName={selectedNote.projectName}
+          senderName={selectedNote.senderName}
+        />
+      )}
+    </div>
   );
 };
 
-export default SharedNoteDrawer;
+export default SharedNotesList;
