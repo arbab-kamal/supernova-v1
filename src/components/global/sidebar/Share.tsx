@@ -37,6 +37,7 @@ export default function ShareNotes({
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('registered')
   const [emailSending, setEmailSending] = useState(false)
+  const [noteContent, setNoteContent] = useState<string>('')
   
   // Determine if modal is open based on props or internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -70,7 +71,21 @@ export default function ShareNotes({
       .then(res => setUsers(res.data))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
-  }, [isOpen])
+
+    // Fetch note content if we have a project name
+    if (projectName) {
+      fetchNoteContent(projectName)
+    }
+  }, [isOpen, projectName])
+
+  const fetchNoteContent = (projectName: string) => {
+    axios
+      .get('http://localhost:8080/getNoteContent', {
+        params: { projectName }
+      })
+      .then(res => setNoteContent(res.data.content || 'No content available'))
+      .catch(err => console.error('Error fetching note content:', err))
+  }
 
   const openModal = () => {
     if (onOpenChange) {
@@ -113,13 +128,18 @@ export default function ShareNotes({
     setShareError(null)
     setShareSuccess(null)
 
-    // Here you would integrate with your email sending logic
-    axios
-      .post('http://localhost:8080/shareNotesByEmail', {
-        projectName,
-        emails: data.emails,
-        subject: data.subject || `Shared Notes: ${projectName}`
+    // Send emails one by one
+    const sendPromises = data.emails.map(email => {
+      return axios.post('http://localhost:8080/send-email', null, {
+        params: {
+          emailId: email,
+          subject: data.subject || `Shared Notes: ${projectName}`,
+          body: noteContent
+        }
       })
+    })
+
+    Promise.all(sendPromises)
       .then(() => setShareSuccess(`Notes sent to ${data.emails.join(', ')}`))
       .catch(err => setShareError(err.response?.data?.message || err.message))
       .finally(() => setEmailSending(false))
@@ -226,10 +246,12 @@ export default function ShareNotes({
                       <EmailInput 
                         onSubmit={handleEmailSubmit}
                         buttonText={emailSending ? "Sending..." : "Share via Email"}
+                        disabled={emailSending}
+                        defaultSubject={projectName ? `Shared Notes: ${projectName}` : ""}
                       />
                       
                       <div className="text-sm text-gray-500 mt-2">
-                        <p>Recipients will receive an email with a link to access the notes.</p>
+                        <p>Recipients will receive the note content via email.</p>
                       </div>
                     </div>
                   </TabsContent>
