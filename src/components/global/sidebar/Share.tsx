@@ -11,8 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Share2, X, Mail } from 'lucide-react'
+import { Share2, X, Mail, Edit } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 interface ShareNotesProps extends HTMLAttributes<HTMLElement> {
   className?: string;
@@ -37,6 +38,9 @@ export default function ShareNotes({
   const [emailMode, setEmailMode] = useState(false)
   const [manualEmail, setManualEmail] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSubject, setEmailSubject] = useState('')
+  const [noteContent, setNoteContent] = useState('')
+  const [loadingNotes, setLoadingNotes] = useState(false)
   
   // Determine if modal is open based on props or internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -70,7 +74,66 @@ export default function ShareNotes({
       .then(res => setUsers(res.data))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
-  }, [isOpen])
+
+    // Also fetch notes when modal opens
+    if (projectName) {
+      fetchNoteContent()
+    }
+  }, [isOpen, projectName])
+
+  // Set default email subject when project changes
+  useEffect(() => {
+    if (projectName) {
+      setEmailSubject(`Sharing Notes: ${projectName}`)
+    }
+  }, [projectName])
+
+  const fetchNoteContent = async () => {
+    if (!projectName) return
+    
+    setLoadingNotes(true)
+    try {
+      const response = await axios.get("http://localhost:8080/getNotes", {
+        params: { projectName },
+      })
+
+      let parsedContent = ''
+      
+      if (typeof response.data === "string") {
+        try {
+          const parsed = JSON.parse(response.data)
+          // If parsed data is an array, use the most recent note
+          if (Array.isArray(parsed)) {
+            const sortedNotes = [...parsed].sort((a, b) => 
+              (b.timestamp || 0) - (a.timestamp || 0)
+            )
+            parsedContent = sortedNotes.length > 0 ? sortedNotes[0].content : ''
+          } else if (parsed && typeof parsed === 'object' && parsed.content) {
+            parsedContent = parsed.content
+          } else {
+            parsedContent = response.data
+          }
+        } catch {
+          parsedContent = response.data
+        }
+      } else if (Array.isArray(response.data)) {
+        // Sort by timestamp and use the most recent note
+        const sortedNotes = [...response.data].sort((a, b) => 
+          (b.timestamp || 0) - (a.timestamp || 0)
+        )
+        parsedContent = sortedNotes.length > 0 ? sortedNotes[0].content : ''
+      } else if (response.data && typeof response.data === 'object' && response.data.content) {
+        parsedContent = response.data.content
+      }
+      
+      setNoteContent(parsedContent)
+    } catch (err) {
+      console.error("Error fetching notes:", err)
+      setError(err instanceof Error ? err.message : "Unknown error")
+    } finally {
+      setLoadingNotes(false)
+    }
+  }
 
   const openModal = () => {
     if (onOpenChange) {
@@ -115,23 +178,21 @@ export default function ShareNotes({
     setShareError(null)
     setShareSuccess(null)
 
-    // The subject is the project name and body is the note content
-    const subject = `Sharing Notes: ${projectName}`
+    // Use the custom subject and the actual note content
+    const subject = emailSubject || `Sharing Notes: ${projectName}`
+    const body = noteContent || `Shared notes from project: ${projectName}`
     
-    // For the body, we're using the project name as per your requirements
-    // In a real app, you might want to fetch the actual note content here
     axios
       .post('http://localhost:8080/send-email', null, {
         params: { 
           emailId: email,
           subject: subject,
-          body: `Shared notes from project: ${projectName}`
+          body: body
         },
       })
       .then(() => {
         setShareSuccess(`Email sent to ${email}`)
         setManualEmail('')
-        setEmailMode(false)
       })
       .catch(err =>
         setShareError(err.response?.data?.message || err.message)
@@ -235,9 +296,34 @@ export default function ShareNotes({
                       </div>
                       
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Email will contain notes from project: <strong>{projectName}</strong>
-                        </p>
+                        <label htmlFor="email-subject" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                          Email Subject
+                        </label>
+                        <Input
+                          id="email-subject"
+                          type="text"
+                          placeholder="Email subject"
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          className="w-full text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="email-body" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                          Email Content
+                        </label>
+                        {loadingNotes ? (
+                          <div className="flex justify-center py-2">Loading note content...</div>
+                        ) : (
+                          <Textarea
+                            id="email-body"
+                            placeholder="Email content"
+                            value={noteContent}
+                            onChange={(e) => setNoteContent(e.target.value)}
+                            className="w-full h-32 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                          />
+                        )}
                       </div>
                     </div>
                   ) : loading ? (
