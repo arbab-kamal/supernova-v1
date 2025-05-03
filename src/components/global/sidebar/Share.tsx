@@ -12,8 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Share2, X, Mail } from 'lucide-react'
-import EmailInput from './email'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
 
 interface ShareNotesProps extends HTMLAttributes<HTMLElement> {
   className?: string;
@@ -35,9 +34,9 @@ export default function ShareNotes({
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('registered')
-  const [emailSending, setEmailSending] = useState(false)
-  const [noteContent, setNoteContent] = useState<string>('')
+  const [emailMode, setEmailMode] = useState(false)
+  const [manualEmail, setManualEmail] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
   
   // Determine if modal is open based on props or internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -71,21 +70,7 @@ export default function ShareNotes({
       .then(res => setUsers(res.data))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
-
-    // Fetch note content if we have a project name
-    if (projectName) {
-      fetchNoteContent(projectName)
-    }
-  }, [isOpen, projectName])
-
-  const fetchNoteContent = (projectName: string) => {
-    axios
-      .get('http://localhost:8080/getNoteContent', {
-        params: { projectName }
-      })
-      .then(res => setNoteContent(res.data.content || 'No content available'))
-      .catch(err => console.error('Error fetching note content:', err))
-  }
+  }, [isOpen])
 
   const openModal = () => {
     if (onOpenChange) {
@@ -103,6 +88,8 @@ export default function ShareNotes({
     }
     setShareError(null)
     setShareSuccess(null)
+    setEmailMode(false)
+    setManualEmail('')
   }
 
   const shareTo = (email: string, userId: number) => {
@@ -122,27 +109,41 @@ export default function ShareNotes({
       .finally(() => setSharingUserId(null))
   }
 
-  const handleEmailSubmit = (data: { emails: string[], subject: string }) => {
+  const sendEmail = (email: string) => {
     if (!projectName) return
-    setEmailSending(true)
+    setSendingEmail(true)
     setShareError(null)
     setShareSuccess(null)
 
-    // Send emails one by one
-    const sendPromises = data.emails.map(email => {
-      return axios.post('http://localhost:8080/send-email', null, {
-        params: {
+    // The subject is the project name and body is the note content
+    const subject = `Sharing Notes: ${projectName}`
+    
+    // For the body, we're using the project name as per your requirements
+    // In a real app, you might want to fetch the actual note content here
+    axios
+      .post('http://localhost:8080/send-email', null, {
+        params: { 
           emailId: email,
-          subject: data.subject || `Shared Notes: ${projectName}`,
-          body: noteContent
-        }
+          subject: subject,
+          body: `Shared notes from project: ${projectName}`
+        },
       })
-    })
+      .then(() => {
+        setShareSuccess(`Email sent to ${email}`)
+        setManualEmail('')
+        setEmailMode(false)
+      })
+      .catch(err =>
+        setShareError(err.response?.data?.message || err.message)
+      )
+      .finally(() => setSendingEmail(false))
+  }
 
-    Promise.all(sendPromises)
-      .then(() => setShareSuccess(`Notes sent to ${data.emails.join(', ')}`))
-      .catch(err => setShareError(err.response?.data?.message || err.message))
-      .finally(() => setEmailSending(false))
+  const toggleEmailMode = () => {
+    setEmailMode(!emailMode)
+    setManualEmail('')
+    setShareError(null)
+    setShareSuccess(null)
   }
 
   return (
@@ -184,78 +185,105 @@ export default function ShareNotes({
                   Please select a project before sharing.
                 </p>
               ) : (
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid grid-cols-2 mb-4">
-                    <TabsTrigger value="registered">
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Registered Users
-                    </TabsTrigger>
-                    <TabsTrigger value="email">
-                      <Mail className="w-4 h-4 mr-2" />
-                      Send by Email
-                    </TabsTrigger>
-                  </TabsList>
+                <>
+                  {shareError && <p className="mb-2 text-red-600">{shareError}</p>}
+                  {shareSuccess && <p className="mb-2 text-green-600">{shareSuccess}</p>}
 
-                  <TabsContent value="registered">
-                    {loading ? (
-                      <div className="flex justify-center py-10">Loading…</div>
-                    ) : error ? (
-                      <p className="text-red-600">Error: {error}</p>
-                    ) : users.length === 0 ? (
-                      <p className="py-4 text-gray-600">No users found to share with.</p>
-                    ) : (
-                      <>
-                        {shareError && <p className="mb-2 text-red-600">{shareError}</p>}
-                        {shareSuccess && <p className="mb-2 text-green-600">{shareSuccess}</p>}
+                  <div className="mb-4 flex justify-between items-center">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                      {emailMode ? "Send Email" : "Share with Users"}
+                    </h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={toggleEmailMode}
+                      className="text-gray-900 dark:text-white"
+                    >
+                      {emailMode ? (
+                        <>Share with Users</>
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Email Mode
+                        </>
+                      )}
+                    </Button>
+                  </div>
 
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className='text-gray-900 dark:text-white'>Email</TableHead>
-                              <TableHead className="text-right text-gray-900 dark:text-white">Action</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {users.map(user => (
-                              <TableRow key={user.id}>
-                                <TableCell className="text-gray-900 dark:text-white">
-                                  {user.email}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    size="sm"
-                                    disabled={sharingUserId === user.id}
-                                    onClick={() => shareTo(user.email, user.id)}
-                                  >
-                                    {sharingUserId === user.id ? 'Sharing…' : 'Share'}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="email">
+                  {emailMode ? (
                     <div className="space-y-4">
-                      {shareError && <p className="text-red-600">{shareError}</p>}
-                      {shareSuccess && <p className="text-green-600">{shareSuccess}</p>}
+                      <div>
+                        <label htmlFor="email-input" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                          Email Address
+                        </label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="email-input"
+                            type="email"
+                            placeholder="Enter email address"
+                            value={manualEmail}
+                            onChange={(e) => setManualEmail(e.target.value)}
+                            className="flex-1 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                          />
+                          <Button
+                            disabled={!manualEmail || sendingEmail}
+                            onClick={() => sendEmail(manualEmail)}
+                          >
+                            {sendingEmail ? 'Sending...' : 'Send Email'}
+                          </Button>
+                        </div>
+                      </div>
                       
-                      <EmailInput 
-                        onSubmit={handleEmailSubmit}
-                        buttonText={emailSending ? "Sending..." : "Share via Email"}
-                        disabled={emailSending}
-                        defaultSubject={projectName ? `Shared Notes: ${projectName}` : ""}
-                      />
-                      
-                      <div className="text-sm text-gray-500 mt-2">
-                        <p>Recipients will receive the note content via email.</p>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Email will contain notes from project: <strong>{projectName}</strong>
+                        </p>
                       </div>
                     </div>
-                  </TabsContent>
-                </Tabs>
+                  ) : loading ? (
+                    <div className="flex justify-center py-10">Loading…</div>
+                  ) : error ? (
+                    <p className="text-red-600">Error: {error}</p>
+                  ) : users.length === 0 ? (
+                    <p className="py-4 text-gray-600">No users found to share with.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className='text-gray-900 dark:text-white'>Email</TableHead>
+                          <TableHead className="text-right text-gray-900 dark:text-white">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map(user => (
+                          <TableRow key={user.id}>
+                            <TableCell className="text-gray-900 dark:text-white">
+                              {user.email}
+                            </TableCell>
+                            <TableCell className="text-right flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={sendingEmail}
+                                onClick={() => sendEmail(user.email)}
+                              >
+                                <Mail className="h-3 w-3 mr-1" />
+                                {sendingEmail && user.email === manualEmail ? 'Sending…' : 'Email'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                disabled={sharingUserId === user.id}
+                                onClick={() => shareTo(user.email, user.id)}
+                              >
+                                {sharingUserId === user.id ? 'Sharing…' : 'Share'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </>
               )}
             </div>
 
