@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send } from "lucide-react";
+import { Send, Mail } from "lucide-react";
 import Typewriter from "./typewriter";
 import WelcomeUser from "./Welcome";
 import { useTheme } from "next-themes";
@@ -14,15 +13,183 @@ import {
   selectChatHistory, 
   selectHistoryLoading,
   selectConversationMessages,
-  selectHasFetchedHistory, // new selector from history slice
+  selectHasFetchedHistory,
   clearHistory,
   fetchChatHistory,
 } from "@/store/historySlice";
-import { useLanguage } from "@/providers/language-providers"; // Import the language context
+import { useLanguage } from "@/providers/language-providers";
+
 interface Message {
   text: string;
   sender: "user" | "ai";
 }
+
+interface EmailModalProps {
+  messageContent: string;
+  onClose: () => void;
+  colors: any;
+  isDarkMode: boolean;
+}
+
+// Email Modal Component
+const EmailModal = ({ messageContent, onClose, colors, isDarkMode }: EmailModalProps) => {
+  const [emailId, setEmailId] = useState("");
+  const [subject, setSubject] = useState("AI Chat Message");
+  const [body, setBody] = useState(messageContent);
+  const [isSending, setIsSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{success?: boolean; message?: string} | null>(null);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSending(true);
+    
+    try {
+      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+      const response = await axios.post(`${baseURL}/send-email`, null, {
+        params: {
+          emailId,
+          subject,
+          body
+        }
+      });
+      
+      setSendResult({ success: true, message: "Email sent successfully!" });
+      
+      // Auto close after success
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+      
+    } catch (error) {
+      console.error("Error sending email:", error);
+      setSendResult({ success: false, message: "Failed to send email. Please try again." });
+    } finally {
+      setIsSending(false);
+    }
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div 
+        className="rounded-lg shadow-lg p-6 w-full max-w-md"
+        style={{ backgroundColor: colors.bg.main }}
+      >
+        <h3 
+          className="text-lg font-medium mb-4"
+          style={{ color: colors.text.primary }}
+        >
+          Send Message as Email
+        </h3>
+        
+        {sendResult && (
+          <div 
+            className={`p-3 mb-4 rounded-md ${sendResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+          >
+            {sendResult.message}
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label 
+              htmlFor="emailId" 
+              className="block mb-2 text-sm font-medium"
+              style={{ color: colors.text.secondary }}
+            >
+              Recipient Email
+            </label>
+            <input
+              id="emailId"
+              type="email"
+              value={emailId}
+              onChange={(e) => setEmailId(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: colors.input.bg,
+                borderColor: colors.input.border,
+                color: colors.text.primary
+              }}
+              required
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label 
+              htmlFor="subject" 
+              className="block mb-2 text-sm font-medium"
+              style={{ color: colors.text.secondary }}
+            >
+              Subject
+            </label>
+            <input
+              id="subject"
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: colors.input.bg,
+                borderColor: colors.input.border,
+                color: colors.text.primary
+              }}
+              required
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label 
+              htmlFor="body" 
+              className="block mb-2 text-sm font-medium"
+              style={{ color: colors.text.secondary }}
+            >
+              Message
+            </label>
+            <textarea
+              id="body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={5}
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+              style={{ 
+                backgroundColor: colors.input.bg,
+                borderColor: colors.input.border,
+                color: colors.text.primary
+              }}
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border rounded-md"
+              style={{ 
+                borderColor: colors.border,
+                color: colors.text.primary
+              }}
+              disabled={isSending}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-white rounded-md"
+              style={{ backgroundColor: colors.primary.main }}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+              ) : (
+                'Send Email'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const Chatbox = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -30,6 +197,10 @@ const Chatbox = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [userInitial, setUserInitial] = useState<string>("");
+  const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedMessageContent, setSelectedMessageContent] = useState("");
+  
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const colors = getThemeColors(isDarkMode);
@@ -42,9 +213,10 @@ const Chatbox = () => {
   const chatHistory = useSelector(selectChatHistory);
   const historyLoading = useSelector(selectHistoryLoading);
   const conversationMessages = useSelector(selectConversationMessages);
-  const hasFetchedHistory = useSelector(selectHasFetchedHistory); // new flag selector
+  const hasFetchedHistory = useSelector(selectHasFetchedHistory);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
+  
   // Function to get project name - robust method to handle different formats
   const getProjectName = useCallback(() => {
     // Handle string case
@@ -165,7 +337,7 @@ const Chatbox = () => {
       messages: messages?.length || 0,
       conversationMessages: conversationMessages?.length || 0,
       hasFetchedHistory,
-      currentLanguage: language, // Log current language for debugging
+      currentLanguage: language,
     });
   }, [chatId, isFirstLoad, historyLoading, chatHistory, messages, conversationMessages, hasFetchedHistory, language]);
 
@@ -268,7 +440,6 @@ const Chatbox = () => {
     e.preventDefault();
     if (inputValue.trim() && !isLoading) {
       const userMessage = { text: inputValue, sender: "user" };
-      //@ts-ignore
       setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
 
@@ -278,15 +449,19 @@ const Chatbox = () => {
         
         const aiResponse = await fetchAIResponse(inputValue);
         const aiMessage = { text: aiResponse || "No response received", sender: "ai" };
-        //@ts-ignore
         setMessages((prev) => [...prev, aiMessage]);
       } catch (error) {
         console.error("Error handling submission:", error);
         const errorMessage = { text: "An error occurred while processing your request.", sender: "ai" };
-        //@ts-ignore
         setMessages((prev) => [...prev, errorMessage]);
       }
     }
+  };
+  
+  // Email handling functions
+  const handleEmailClick = (messageContent: string) => {
+    setSelectedMessageContent(messageContent);
+    setEmailModalOpen(true);
   };
 
   // Simplified loading condition - only show for returning users with a chatId
@@ -361,7 +536,7 @@ const Chatbox = () => {
                     message.sender === "user"
                       ? "rounded-tr-none"
                       : "rounded-tl-none text-white"
-                  } max-w-[95%] whitespace-pre-wrap break-words`}
+                  } max-w-[95%] whitespace-pre-wrap break-words relative group`}
                   style={{ 
                     backgroundColor: message.sender === "user" 
                       ? isDarkMode ? colors.bg.tertiary : colors.bg.tertiary
@@ -370,11 +545,24 @@ const Chatbox = () => {
                       ? colors.text.primary
                       : '#FFFFFF' 
                   }}
+                  onMouseEnter={() => message.sender === "ai" && setHoveredMessageIndex(index)}
+                  onMouseLeave={() => setHoveredMessageIndex(null)}
                 >
                   {message.sender === "ai" && index === messages.length - 1 && !chatId ? (
                     <Typewriter text={message.text} speed={20} />
                   ) : (
                     message.text
+                  )}
+                  
+                  {/* Email button that shows on hover for AI messages */}
+                  {message.sender === "ai" && hoveredMessageIndex === index && (
+                    <button
+                      className="absolute top-2 right-2 p-1 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-opacity"
+                      onClick={() => handleEmailClick(message.text)}
+                      title="Send as email"
+                    >
+                      <Mail size={16} color="#FFFFFF" />
+                    </button>
                   )}
                 </div>
                 {message.sender === "user" && (
@@ -412,19 +600,14 @@ const Chatbox = () => {
               style={{ 
                 backgroundColor: colors.input.bg,
                 borderColor: colors.input.border,
-                color: colors.text.primary,
-                "&:focus": {
-                  borderColor: "transparent",
-                  boxShadow: `0 0 0 2px ${colors.primary.main}`
-                }
+                color: colors.text.primary
               }}
             />
             <button
               type="submit"
               className="p-2.5 text-white rounded-full flex items-center justify-center"
               style={{ 
-                backgroundColor: colors.primary.main,
-                "&:hover": { filter: "brightness(90%)" }
+                backgroundColor: colors.primary.main
               }}
               disabled={isLoading}
             >
@@ -437,6 +620,16 @@ const Chatbox = () => {
           </div>
         </form>
       </div>
+      
+      {/* Email Modal */}
+      {emailModalOpen && (
+        <EmailModal 
+          messageContent={selectedMessageContent}
+          onClose={() => setEmailModalOpen(false)}
+          colors={colors}
+          isDarkMode={isDarkMode}
+        />
+      )}
     </div>
   );
 };

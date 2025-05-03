@@ -11,7 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Share2, X } from 'lucide-react'
+import { Share2, X, Mail } from 'lucide-react'
+import EmailInput from './email'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface ShareNotesProps extends HTMLAttributes<HTMLElement> {
   className?: string;
@@ -33,6 +35,8 @@ export default function ShareNotes({
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('registered')
+  const [emailSending, setEmailSending] = useState(false)
   
   // Determine if modal is open based on props or internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -103,6 +107,24 @@ export default function ShareNotes({
       .finally(() => setSharingUserId(null))
   }
 
+  const handleEmailSubmit = (data: { emails: string[], subject: string }) => {
+    if (!projectName) return
+    setEmailSending(true)
+    setShareError(null)
+    setShareSuccess(null)
+
+    // Here you would integrate with your email sending logic
+    axios
+      .post('http://localhost:8080/shareNotesByEmail', {
+        projectName,
+        emails: data.emails,
+        subject: data.subject || `Shared Notes: ${projectName}`
+      })
+      .then(() => setShareSuccess(`Notes sent to ${data.emails.join(', ')}`))
+      .catch(err => setShareError(err.response?.data?.message || err.message))
+      .finally(() => setEmailSending(false))
+  }
+
   return (
     <>
       {showButton && (
@@ -141,44 +163,77 @@ export default function ShareNotes({
                 <p className="py-4 text-red-600">
                   Please select a project before sharing.
                 </p>
-              ) : loading ? (
-                <div className="flex justify-center py-10">Loading…</div>
-              ) : error ? (
-                <p className="text-red-600">Error: {error}</p>
-              ) : users.length === 0 ? (
-                <p className="py-4 text-gray-600">No users found to share with.</p>
               ) : (
-                <>
-                  {shareError && <p className="mb-2 text-red-600">{shareError}</p>}
-                  {shareSuccess && <p className="mb-2 text-green-600">{shareSuccess}</p>}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid grid-cols-2 mb-4">
+                    <TabsTrigger value="registered">
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Registered Users
+                    </TabsTrigger>
+                    <TabsTrigger value="email">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send by Email
+                    </TabsTrigger>
+                  </TabsList>
 
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className='text-gray-900 dark:text-white'>Email</TableHead>
-                        <TableHead className="text-right text-gray-900 dark:text-white">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map(user => (
-                        <TableRow key={user.id}>
-                          <TableCell className="text-gray-900 dark:text-white">
-                            {user.email}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              disabled={sharingUserId === user.id}
-                              onClick={() => shareTo(user.email, user.id)}
-                            >
-                              {sharingUserId === user.id ? 'Sharing…' : 'Share'}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </>
+                  <TabsContent value="registered">
+                    {loading ? (
+                      <div className="flex justify-center py-10">Loading…</div>
+                    ) : error ? (
+                      <p className="text-red-600">Error: {error}</p>
+                    ) : users.length === 0 ? (
+                      <p className="py-4 text-gray-600">No users found to share with.</p>
+                    ) : (
+                      <>
+                        {shareError && <p className="mb-2 text-red-600">{shareError}</p>}
+                        {shareSuccess && <p className="mb-2 text-green-600">{shareSuccess}</p>}
+
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className='text-gray-900 dark:text-white'>Email</TableHead>
+                              <TableHead className="text-right text-gray-900 dark:text-white">Action</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {users.map(user => (
+                              <TableRow key={user.id}>
+                                <TableCell className="text-gray-900 dark:text-white">
+                                  {user.email}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    size="sm"
+                                    disabled={sharingUserId === user.id}
+                                    onClick={() => shareTo(user.email, user.id)}
+                                  >
+                                    {sharingUserId === user.id ? 'Sharing…' : 'Share'}
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="email">
+                    <div className="space-y-4">
+                      {shareError && <p className="text-red-600">{shareError}</p>}
+                      {shareSuccess && <p className="text-green-600">{shareSuccess}</p>}
+                      
+                      <EmailInput 
+                        onSubmit={handleEmailSubmit}
+                        buttonText={emailSending ? "Sending..." : "Share via Email"}
+                      />
+                      
+                      <div className="text-sm text-gray-500 mt-2">
+                        <p>Recipients will receive an email with a link to access the notes.</p>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               )}
             </div>
 
